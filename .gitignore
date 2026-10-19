@@ -1,0 +1,29 @@
+# Target Archery - .gitignore
+# Environment & Secrets
+.env
+.env.local
+.env.production
+*.pem
+*.key
+credentials*.json
+
+# Logs & Temp files
+*.log
+*.tmp
+temp/
+scratch/
+
+# Python cache (deployment helpers)
+__pycache__/
+*.pyc
+
+# IDEs & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Dependencies
+node_modules/
+vendor/

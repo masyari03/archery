@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+Allow: /index.php
+Allow: /register_archer.php
+Allow: /saas_marketing.php
+Allow: /sitemap.php
+Allow: /assets/
+
+Disallow: /admin_*.php
+Disallow: /master_*.php
+Disallow: /cms_admin.php
+Disallow: /coach_dashboard.php
+Disallow: /app_dashboard.php
+Disallow: /settings.php
+Disallow: /bills.php
+Disallow: /report_*.php
+Disallow: /plotter.php
+Disallow: /api/
+Disallow: /config/
+Disallow: /views/
+Disallow: /includes/
+
+Sitemap: https://archery.codika.my.id/sitemap.php
