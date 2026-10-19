@@ -635,3 +635,243 @@ a:hover {
     }
 }
 
+/* ==========================================================================
+   DUAL THEME ENGINE: HIGH-CONTRAST LIGHT & DARK MODE ADAPTATIONS
+   ========================================================================== */
+
+/* 1. Global Light Theme Base Overrides */
+[data-theme="light"] {
+    color-scheme: light;
+}
+
+[data-theme="light"] body {
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+}
+
+/* 2. Headings & Typography */
+[data-theme="light"] h1,
+[data-theme="light"] h2,
+[data-theme="light"] h3,
+[data-theme="light"] h4,
+[data-theme="light"] h5,
+[data-theme="light"] h6,
+[data-theme="light"] .brand-font,
+[data-theme="light"] .display-1,
+[data-theme="light"] .display-2,
+[data-theme="light"] .display-3,
+[data-theme="light"] .display-4,
+[data-theme="light"] .display-5,
+[data-theme="light"] .display-6 {
+    color: #0f172a !important;
+}
+
+/* Teks Putih / Terang otomatis gelap di Light Mode kecuali di dalam tombol/badge berwarna */
+[data-theme="light"] .text-white:not(.btn):not(.btn *):not(.badge):not(.badge *):not(.score-pill):not(.master-impersonate-bar *),
+[data-theme="light"] .text-light:not(.btn):not(.btn *):not(.badge):not(.badge *):not(.score-pill):not(.master-impersonate-bar *) {
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .text-muted {
+    color: #475569 !important;
+}
+
+[data-theme="light"] p.lead {
+    color: #334155 !important;
+}
+
+/* 3. Headers, Navbars & Top Bars */
+[data-theme="light"] .navbar,
+[data-theme="light"] .nav-cms-header,
+[data-theme="light"] header.sticky-top,
+[data-theme="light"] header:not(.no-theme-adapt) {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04) !important;
+}
+
+[data-theme="light"] .tenant-top-bar {
+    background: #f1f5f9 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    color: #334155 !important;
+}
+
+[data-theme="light"] .nav-brand {
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .nav-item {
+    color: #334155;
+}
+
+[data-theme="light"] .nav-item:hover,
+[data-theme="light"] .nav-item.active {
+    color: var(--primary);
+    background: rgba(2, 132, 199, 0.08);
+}
+
+[data-theme="light"] .bottom-nav {
+    background: rgba(255, 255, 255, 0.96) !important;
+    border-top: 1px solid #e2e8f0 !important;
+    box-shadow: 0 -4px 15px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="light"] .bottom-nav-item {
+    color: #64748b;
+}
+
+/* 4. Cards, Feature Boxes, & Containers */
+[data-theme="light"] .card,
+[data-theme="light"] .feature-box,
+[data-theme="light"] .tenant-card,
+[data-theme="light"] .pricing-card-saas,
+[data-theme="light"] .form-card,
+[data-theme="light"] .modal-box,
+[data-theme="light"] .login-card,
+[data-theme="light"] .program-card,
+[data-theme="light"] .coach-card,
+[data-theme="light"] .schedule-item-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05) !important;
+}
+
+[data-theme="light"] .card-header {
+    border-bottom-color: #f1f5f9 !important;
+}
+
+/* 5. Hero Sections */
+[data-theme="light"] .saas-hero {
+    background: radial-gradient(circle at 80% 20%, rgba(2, 132, 199, 0.12) 0%, rgba(248, 250, 252, 0.98) 70%),
+                linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%) !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+[data-theme="light"] .cms-hero-section {
+    background: radial-gradient(circle at 80% 20%, rgba(2, 132, 199, 0.10) 0%, rgba(248, 250, 252, 0.98) 70%),
+                linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%) !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+[data-theme="light"] .reg-hero {
+    background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%) !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+/* 6. Form Controls & Inputs */
+[data-theme="light"] .form-control,
+[data-theme="light"] .form-select,
+[data-theme="light"] input[type="text"],
+[data-theme="light"] input[type="password"],
+[data-theme="light"] input[type="number"],
+[data-theme="light"] input[type="date"],
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+[data-theme="light"] .form-control:focus,
+[data-theme="light"] .form-select:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18) !important;
+}
+
+[data-theme="light"] .form-control::placeholder {
+    color: #94a3b8 !important;
+}
+
+[data-theme="light"] .form-label {
+    color: #1e293b !important;
+}
+
+/* 7. Tables & Scorecard */
+[data-theme="light"] table th,
+[data-theme="light"] .scorecard-table th {
+    background-color: #f1f5f9 !important;
+    color: #1e293b !important;
+    border-color: #e2e8f0 !important;
+}
+
+[data-theme="light"] table td,
+[data-theme="light"] .scorecard-table td {
+    border-color: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+[data-theme="light"] table tbody tr:hover td {
+    background-color: #f8fafc !important;
+}
+
+/* 8. Buttons & Controls */
+[data-theme="light"] .btn-outline-light {
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .btn-outline-light:hover {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    border-color: #0f172a !important;
+}
+
+[data-theme="light"] .btn-secondary {
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] .btn-secondary:hover {
+    background: #e2e8f0 !important;
+}
+
+[data-theme="light"] .theme-toggle-btn {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .theme-toggle-btn:hover {
+    background: #e2e8f0 !important;
+    color: var(--primary) !important;
+}
+
+[data-theme="light"] .stat-box {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+[data-theme="light"] .stat-value {
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .stat-label {
+    color: #64748b !important;
+}
+
+[data-theme="light"] .child-switcher-box {
+    background: #f0f9ff !important;
+    border-color: #bae6fd !important;
+}
+
+[data-theme="light"] .login-tabs {
+    background: #f1f5f9 !important;
+}
+
+[data-theme="light"] .login-tab-btn {
+    color: #64748b !important;
+}
+
+[data-theme="light"] .login-tab-btn.active {
+    background: var(--primary) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="light"] .demo-box {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    color: #475569 !important;
+}
+

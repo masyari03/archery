@@ -69,10 +69,18 @@ foreach ($schedules as $sch) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="id" data-theme="dark">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Anti-Flicker Dual Theme Engine -->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('archery_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
 
     <!-- SEO META TAGS LENGKAP -->
     <title><?= htmlspecialchars($seoTitle) ?></title>
@@ -242,7 +250,7 @@ foreach ($schedules as $sch) {
             <div class="d-flex align-items-center gap-2">
                 <!-- Multi-Tenant Demo Switcher -->
                 <span class="text-muted small d-none d-sm-inline">Pilih Klub:</span>
-                <select class="form-select form-select-sm bg-dark text-white border-secondary py-0" style="font-size: 12px; width: auto;" onchange="location.href='index.php?club=' + this.value">
+                <select class="form-select form-select-sm py-0" style="font-size: 12px; width: auto;" onchange="location.href='index.php?club=' + this.value">
                     <?php foreach ($allTenants as $t): ?>
                         <option value="<?= htmlspecialchars($t['subdomain_slug'] ?: $t['club_code']) ?>" <?= $t['id'] == $tenantId ? 'selected' : '' ?>>
                             🎯 <?= htmlspecialchars($t['club_name']) ?> (<?= htmlspecialchars($t['city']) ?>)
@@ -259,28 +267,32 @@ foreach ($schedules as $sch) {
     <!-- MAIN NAVBAR WEB CMS -->
     <header class="nav-cms-header py-2">
         <div class="container d-flex justify-content-between align-items-center">
-            <a href="index.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="d-flex align-items-center gap-2 text-decoration-none text-white">
+            <a href="index.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="d-flex align-items-center gap-2 text-decoration-none">
                 <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style="width: 42px; height: 42px; background: var(--primary); font-size: 20px;">
                     🎯
                 </div>
                 <div>
-                    <h5 class="mb-0 fw-bold" style="letter-spacing: -0.02em;"><?= htmlspecialchars($currentTenant['club_name']) ?></h5>
+                    <h5 class="mb-0 fw-bold brand-font" style="letter-spacing: -0.02em;"><?= htmlspecialchars($currentTenant['club_name']) ?></h5>
                     <span class="text-muted small" style="font-size: 11px;">Official Archery Club &bull; Member Platform</span>
                 </div>
             </a>
 
             <!-- Menu Publik -->
             <nav class="d-none d-lg-flex align-items-center gap-4">
-                <a href="#tentang" class="text-light text-decoration-none small fw-medium">Tentang Klub</a>
-                <a href="#filosofi" class="text-light text-decoration-none small fw-medium">Filosofi Sunnah</a>
-                <a href="#program" class="text-light text-decoration-none small fw-medium">Program Kursus</a>
-                <a href="#jadwal" class="text-light text-decoration-none small fw-medium">Jadwal Lapangan</a>
-                <a href="#pelatih" class="text-light text-decoration-none small fw-medium">Tim Pelatih</a>
-                <a href="#galeri" class="text-light text-decoration-none small fw-medium">Galeri &amp; Fasilitas</a>
+                <a href="#tentang" class="nav-item small fw-medium">Tentang Klub</a>
+                <a href="#filosofi" class="nav-item small fw-medium">Filosofi Sunnah</a>
+                <a href="#program" class="nav-item small fw-medium">Program Kursus</a>
+                <a href="#jadwal" class="nav-item small fw-medium">Jadwal Lapangan</a>
+                <a href="#pelatih" class="nav-item small fw-medium">Tim Pelatih</a>
+                <a href="#galeri" class="nav-item small fw-medium">Galeri &amp; Fasilitas</a>
             </nav>
 
             <!-- Tombol Aksi: Masuk Portal / Daftar -->
             <div class="d-flex align-items-center gap-2">
+                <!-- TOMBOL TOGGLE TEMA ☀️ / 🌙 -->
+                <button type="button" class="theme-toggle-btn me-1" onclick="toggleAppTheme()" title="Ganti Tema Terang/Gelap" id="themeToggleBtn">
+                    🌙
+                </button>
                 <a href="register_archer.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="btn btn-warning btn-sm fw-bold text-dark px-3 shadow-sm">
                     <i class="bi bi-pencil-square"></i> Daftar Atlet Baru
                 </a>
@@ -649,9 +661,9 @@ foreach ($schedules as $sch) {
     </section>
 
     <!-- FOOTER WEB CMS -->
-    <footer class="py-4" style="background: #070a10; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+    <footer class="py-4" style="background: var(--bg-card); border-top: 1px solid var(--border-color);">
         <div class="container text-center text-muted small">
-            <div class="d-flex justify-content-center gap-4 mb-3">
+            <div class="d-flex justify-content-center gap-4 mb-3 flex-wrap">
                 <a href="#tentang" class="text-muted text-decoration-none">Tentang</a>
                 <a href="#program" class="text-muted text-decoration-none">Program</a>
                 <a href="#jadwal" class="text-muted text-decoration-none">Jadwal</a>
@@ -665,5 +677,25 @@ foreach ($schedules as $sch) {
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleAppTheme() {
+            const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('archery_theme', next);
+            updateThemeIcons(next);
+        }
+
+        function updateThemeIcons(theme) {
+            const icon = theme === 'dark' ? '🌙' : '☀️';
+            const btn = document.getElementById('themeToggleBtn');
+            if (btn) btn.textContent = icon;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            updateThemeIcons(current);
+        });
+    </script>
 </body>
 </html>

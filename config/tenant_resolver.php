@@ -54,14 +54,19 @@ class TenantResolver {
             return $tenant;
         }
 
-        // 3. Cek Subdomain (misal: annahl.archery.codika.my.id -> slug: annahl)
+        // 3. Cek Subdomain (misal: annahl.archery.codika.my.id -> slug: annahl, atau annahl-archery.codika.my.id -> slug: annahl)
         $parts = explode('.', $cleanHost);
         if (count($parts) >= 3) {
             $subdomain = $parts[0];
-            // Abaikan subdomain www, app, portal
-            if (!in_array($subdomain, ['www', 'app', 'portal', 'master'])) {
-                $stmt = $pdo->prepare("SELECT * FROM archery_clubs WHERE subdomain_slug = :sub AND is_active = 1 LIMIT 1");
-                $stmt->execute([':sub' => $subdomain]);
+            $cleanSlug = $subdomain;
+            if (str_ends_with($subdomain, '-archery')) {
+                $cleanSlug = substr($subdomain, 0, -8);
+            }
+
+            // Abaikan subdomain www, app, portal, archery (root platform)
+            if (!in_array($cleanSlug, ['www', 'app', 'portal', 'master', 'archery'])) {
+                $stmt = $pdo->prepare("SELECT * FROM archery_clubs WHERE (subdomain_slug = :sub OR club_code = :code) AND is_active = 1 LIMIT 1");
+                $stmt->execute([':sub' => $cleanSlug, ':code' => $cleanSlug]);
                 $tenant = $stmt->fetch();
                 if ($tenant) {
                     $_SESSION['current_tenant_id'] = $tenant['id'];

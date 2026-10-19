@@ -82,11 +82,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $primaryColor = $currentTenant['primary_color'] ?? '#0284c7';
 ?>
 <!DOCTYPE html>
-<html lang="id" data-theme="dark">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pendaftaran Atlet Baru &bull; <?= htmlspecialchars($currentTenant['club_name']) ?></title>
+
+    <!-- Anti-Flicker Dual Theme Engine -->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('archery_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
@@ -109,18 +118,24 @@ $primaryColor = $currentTenant['primary_color'] ?? '#0284c7';
 <body>
 
     <!-- TOP HEADER -->
-    <header class="py-3 border-bottom border-secondary border-opacity-25" style="background: rgba(11, 15, 25, 0.95);">
+    <header class="py-3 border-bottom" style="background: var(--bg-card); border-color: var(--border-color) !important;">
         <div class="container d-flex justify-content-between align-items-center">
-            <a href="index.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="d-flex align-items-center gap-2 text-decoration-none text-white">
+            <a href="index.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="d-flex align-items-center gap-2 text-decoration-none">
                 <span class="fs-4">🎯</span>
                 <div>
-                    <h6 class="mb-0 fw-bold"><?= htmlspecialchars($currentTenant['club_name']) ?></h6>
+                    <h6 class="mb-0 fw-bold brand-font"><?= htmlspecialchars($currentTenant['club_name']) ?></h6>
                     <span class="text-muted small" style="font-size: 11px;">Pendaftaran Calon Santri &bull; Atlet Panahan</span>
                 </div>
             </a>
-            <a href="index.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-left"></i> Kembali ke Beranda
-            </a>
+            <div class="d-flex align-items-center gap-2">
+                <!-- TOMBOL TOGGLE TEMA ☀️ / 🌙 -->
+                <button type="button" class="theme-toggle-btn me-1" onclick="toggleAppTheme()" title="Ganti Tema Terang/Gelap" id="themeToggleBtn">
+                    🌙
+                </button>
+                <a href="index.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left"></i> Kembali ke Beranda
+                </a>
+            </div>
         </div>
     </header>
 
@@ -170,22 +185,22 @@ $primaryColor = $currentTenant['primary_color'] ?? '#0284c7';
                             <div class="row g-3 mb-4">
                                 <div class="col-md-8">
                                     <label class="form-label fw-bold">Nama Lengkap Ananda <span class="text-danger">*</span></label>
-                                    <input type="text" name="student_name" class="form-control bg-dark text-white border-secondary" placeholder="Contoh: Muhammad Ahmad Fauzi" required value="<?= htmlspecialchars($_POST['student_name'] ?? '') ?>">
+                                    <input type="text" name="student_name" class="form-control" placeholder="Contoh: Muhammad Ahmad Fauzi" required value="<?= htmlspecialchars($_POST['student_name'] ?? '') ?>">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold">Nama Panggilan</label>
-                                    <input type="text" name="student_nickname" class="form-control bg-dark text-white border-secondary" placeholder="Contoh: Fauzi" value="<?= htmlspecialchars($_POST['student_nickname'] ?? '') ?>">
+                                    <input type="text" name="student_nickname" class="form-control" placeholder="Contoh: Fauzi" value="<?= htmlspecialchars($_POST['student_nickname'] ?? '') ?>">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">Jenis Kelamin <span class="text-danger">*</span></label>
-                                    <select name="gender" class="form-select bg-dark text-white border-secondary" required>
+                                    <select name="gender" class="form-select" required>
                                         <option value="L" <?= ($_POST['gender'] ?? '') === 'L' ? 'selected' : '' ?>>Laki-laki (Ikhwan)</option>
                                         <option value="P" <?= ($_POST['gender'] ?? '') === 'P' ? 'selected' : '' ?>>Perempuan (Akhwat)</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">Tanggal Lahir</label>
-                                    <input type="date" name="birth_date" class="form-control bg-dark text-white border-secondary" value="<?= htmlspecialchars($_POST['birth_date'] ?? '') ?>">
+                                    <input type="date" name="birth_date" class="form-control" value="<?= htmlspecialchars($_POST['birth_date'] ?? '') ?>">
                                 </div>
                             </div>
 
@@ -196,16 +211,16 @@ $primaryColor = $currentTenant['primary_color'] ?? '#0284c7';
                             <div class="row g-3 mb-4">
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">Nama Orang Tua / Wali <span class="text-danger">*</span></label>
-                                    <input type="text" name="parent_name" class="form-control bg-dark text-white border-secondary" placeholder="Contoh: Bapak Hendra Santoso" required value="<?= htmlspecialchars($_POST['parent_name'] ?? '') ?>">
+                                    <input type="text" name="parent_name" class="form-control" placeholder="Contoh: Bapak Hendra Santoso" required value="<?= htmlspecialchars($_POST['parent_name'] ?? '') ?>">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">Nomor WhatsApp Aktif <span class="text-danger">*</span></label>
-                                    <input type="tel" name="parent_phone" class="form-control bg-dark text-white border-secondary" placeholder="Contoh: 081288889999" required value="<?= htmlspecialchars($_POST['parent_phone'] ?? '') ?>">
+                                    <input type="tel" name="parent_phone" class="form-control" placeholder="Contoh: 081288889999" required value="<?= htmlspecialchars($_POST['parent_phone'] ?? '') ?>">
                                     <div class="form-text text-muted">Nomor ini akan digunakan untuk notifikasi skor &amp; verifikasi login.</div>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label">Email (Opsional)</label>
-                                    <input type="email" name="parent_email" class="form-control bg-dark text-white border-secondary" placeholder="Contoh: orangtua@gmail.com" value="<?= htmlspecialchars($_POST['parent_email'] ?? '') ?>">
+                                    <input type="email" name="parent_email" class="form-control" placeholder="Contoh: orangtua@gmail.com" value="<?= htmlspecialchars($_POST['parent_email'] ?? '') ?>">
                                 </div>
                             </div>
 
@@ -216,7 +231,7 @@ $primaryColor = $currentTenant['primary_color'] ?? '#0284c7';
                             <div class="row g-3 mb-4">
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">Pilihan Program Latihan <span class="text-danger">*</span></label>
-                                    <select name="program_choice" class="form-select bg-dark text-white border-secondary" required>
+                                    <select name="program_choice" class="form-select" required>
                                         <?php if (empty($programs)): ?>
                                             <option value="Kelas Pemula Dasar">Kelas Pemula Dasar (Standard Bow)</option>
                                         <?php else: ?>
@@ -232,7 +247,7 @@ $primaryColor = $currentTenant['primary_color'] ?? '#0284c7';
                                     <label class="form-label fw-bold">Kepemilikan Busur Panah</label>
                                     <div class="form-check mt-2">
                                         <input class="form-check-input" type="checkbox" name="has_own_bow" value="1" id="ownBowCheck" <?= !empty($_POST['has_own_bow']) ? 'checked' : '' ?>>
-                                        <label class="form-check-label text-light" for="ownBowCheck">
+                                        <label class="form-check-label" for="ownBowCheck">
                                             Sudah memiliki busur panah sendiri
                                         </label>
                                     </div>
@@ -240,7 +255,7 @@ $primaryColor = $currentTenant['primary_color'] ?? '#0284c7';
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label">Catatan Tambahan / Pengalaman Sebelumnya</label>
-                                    <textarea name="notes" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="Ceritakan riwayat latihan ananda atau preferensi jadwal latihan..."><?= htmlspecialchars($_POST['notes'] ?? '') ?></textarea>
+                                    <textarea name="notes" class="form-control" rows="3" placeholder="Ceritakan riwayat latihan ananda atau preferensi jadwal latihan..."><?= htmlspecialchars($_POST['notes'] ?? '') ?></textarea>
                                 </div>
                             </div>
 
@@ -260,12 +275,32 @@ $primaryColor = $currentTenant['primary_color'] ?? '#0284c7';
     </div>
 
     <!-- FOOTER -->
-    <footer class="py-4 text-center text-muted small border-top border-secondary border-opacity-25" style="background: #070a10;">
+    <footer class="py-4 text-center text-muted small border-top" style="background: var(--bg-card); border-color: var(--border-color) !important;">
         <div class="container">
             &copy; <?= date('Y') ?> <strong><?= htmlspecialchars($currentTenant['club_name']) ?></strong> &bull; Formulir Pendaftaran Atlet Resmi
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleAppTheme() {
+            const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('archery_theme', next);
+            updateThemeIcons(next);
+        }
+
+        function updateThemeIcons(theme) {
+            const icon = theme === 'dark' ? '🌙' : '☀️';
+            const btn = document.getElementById('themeToggleBtn');
+            if (btn) btn.textContent = icon;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            updateThemeIcons(current);
+        });
+    </script>
 </body>
 </html>

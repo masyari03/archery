@@ -30,7 +30,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="id" data-theme="dark">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -38,6 +38,14 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
     <meta name="description" content="<?= htmlspecialchars($mkt['meta_description'] ?? 'Platform SaaS digitalisasi klub panahan terbaik di Indonesia berstandar World Archery.') ?>">
     <meta name="keywords" content="<?= htmlspecialchars($mkt['meta_keywords'] ?? 'software panahan, aplikasi scoring archery, sistem klub panahan indonesia') ?>">
     <link rel="canonical" href="https://archery.codika.my.id/">
+
+    <!-- Anti-Flicker Dual Theme Engine -->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('archery_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
 
     <!-- OpenGraph Meta Tags untuk Viral Sharing di WhatsApp & Medsos -->
     <meta property="og:title" content="<?= htmlspecialchars($mkt['meta_title'] ?? 'Target Archery - Software Manajemen & Scoring Panahan') ?>">
@@ -72,6 +80,12 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
     <style>
+        .saas-header {
+            background: rgba(11, 15, 25, 0.92);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            z-index: 1050;
+        }
         .saas-hero {
             background: radial-gradient(circle at 80% 20%, rgba(2, 132, 199, 0.35) 0%, rgba(11, 15, 25, 0.98) 70%),
                         linear-gradient(180deg, #0b0f19 0%, #0f172a 100%);
@@ -119,31 +133,41 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
             border-color: var(--primary);
             box-shadow: 0 10px 40px rgba(2, 132, 199, 0.3);
         }
+        .simulation-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            backdrop-filter: blur(14px);
+        }
     </style>
 </head>
 <body>
 
     <!-- TOP HEADER SAAS PLATFORM -->
-    <header class="py-3 border-bottom border-secondary border-opacity-25 sticky-top" style="background: rgba(11, 15, 25, 0.92); backdrop-filter: blur(12px); z-index: 1050;">
+    <header class="py-3 border-bottom sticky-top saas-header">
         <div class="container d-flex justify-content-between align-items-center">
-            <a href="index.php" class="d-flex align-items-center gap-2 text-decoration-none text-white">
+            <a href="index.php" class="d-flex align-items-center gap-2 text-decoration-none">
                 <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary text-white fw-bold" style="width: 44px; height: 44px; font-size: 22px;">
                     🎯
                 </div>
                 <div>
-                    <h5 class="mb-0 fw-bold" style="letter-spacing: -0.02em;">TARGET ARCHERY SAAS</h5>
+                    <h5 class="mb-0 fw-bold brand-font" style="letter-spacing: -0.02em;">TARGET ARCHERY SAAS</h5>
                     <span class="text-muted small" style="font-size: 11px;">Platform Bisnis &amp; Scoring Panahan Indonesia</span>
                 </div>
             </a>
 
             <nav class="d-none d-lg-flex align-items-center gap-4">
-                <a href="#fitur" class="text-light text-decoration-none small fw-medium">Fitur Software</a>
-                <a href="#showcase" class="text-light text-decoration-none small fw-medium">Klub Mitra</a>
-                <a href="#harga" class="text-light text-decoration-none small fw-medium">Paket Harga</a>
-                <a href="#faq" class="text-light text-decoration-none small fw-medium">Tanya Jawab</a>
+                <a href="#fitur" class="nav-item small fw-medium">Fitur Software</a>
+                <a href="#showcase" class="nav-item small fw-medium">Klub Mitra</a>
+                <a href="#harga" class="nav-item small fw-medium">Paket Harga</a>
+                <a href="#faq" class="nav-item small fw-medium">Tanya Jawab</a>
             </nav>
 
             <div class="d-flex align-items-center gap-2">
+                <!-- TOMBOL TOGGLE TEMA ☀️ / 🌙 -->
+                <button type="button" class="theme-toggle-btn me-1" onclick="toggleAppTheme()" title="Ganti Tema Terang/Gelap" id="themeToggleBtn">
+                    🌙
+                </button>
                 <a href="login.php" class="btn btn-outline-info btn-sm px-3 fw-bold">
                     <i class="bi bi-box-arrow-in-right"></i> Masuk Akun
                 </a>
@@ -186,20 +210,20 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
                 </div>
 
                 <div class="col-lg-5 text-center">
-                    <div class="card p-4 border-0 shadow-lg text-start" style="background: rgba(18, 24, 38, 0.85); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.12) !important;">
+                    <div class="card simulation-card p-4 shadow-lg text-start">
                         <div class="d-flex align-items-center gap-3 mb-3 pb-3 border-bottom border-secondary border-opacity-25">
                             <div class="rounded-circle bg-warning text-dark fw-bold d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; font-size: 24px;">
                                 🏹
                             </div>
                             <div>
-                                <h6 class="text-white fw-bold mb-0">Live Simulation Portal</h6>
+                                <h6 class="fw-bold mb-0">Live Simulation Portal</h6>
                                 <span class="text-muted small">Coba langsung sistem scoring klub</span>
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label small text-muted">Pilih Klub Contoh yang Ingin Dilihat:</label>
-                            <select class="form-select bg-dark text-white border-secondary" onchange="if(this.value) window.open(this.value, '_blank')">
+                            <label class="form-label small">Pilih Klub Contoh yang Ingin Dilihat:</label>
+                            <select class="form-select" onchange="if(this.value) window.open(this.value, '_blank')">
                                 <option value="">-- Pilih Demo Klub Panahan --</option>
                                 <?php foreach ($allTenants as $t): ?>
                                     <option value="index.php?club=<?= urlencode($t['subdomain_slug']) ?>">
@@ -333,25 +357,25 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
     </section>
 
     <!-- FAQ -->
-    <section id="faq" class="py-5" style="background: rgba(15, 23, 42, 0.4); border-top: 1px solid var(--border-color);">
+    <section id="faq" class="py-5 saas-faq-section" style="border-top: 1px solid var(--border-color);">
         <div class="container py-4">
             <div class="text-center mb-5">
                 <span class="badge bg-secondary mb-2">Bantuan &amp; FAQ</span>
-                <h2 class="fw-bold text-white mb-2">Pertanyaan yang Sering Diajukan</h2>
+                <h2 class="fw-bold mb-2">Pertanyaan yang Sering Diajukan</h2>
             </div>
 
             <div class="row justify-content-center">
                 <div class="col-lg-8">
                     <div class="accordion" id="saasFaq">
                         <?php foreach ($faq as $idx => $f): ?>
-                            <div class="accordion-item bg-dark border-secondary mb-3 rounded overflow-hidden">
+                            <div class="accordion-item mb-3 rounded overflow-hidden" style="border: 1px solid var(--border-color); background: var(--bg-card);">
                                 <h2 class="accordion-header" id="heading<?= $idx ?>">
-                                    <button class="accordion-button bg-dark text-white fw-bold collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?= $idx ?>">
+                                    <button class="accordion-button fw-bold collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?= $idx ?>" style="background: var(--bg-card); color: var(--text-main);">
                                         <?= htmlspecialchars($f['q']) ?>
                                     </button>
                                 </h2>
                                 <div id="collapse<?= $idx ?>" class="accordion-collapse collapse" data-bs-parent="#saasFaq">
-                                    <div class="accordion-body text-muted small" style="line-height: 1.8;">
+                                    <div class="accordion-body text-muted small" style="line-height: 1.8; background: var(--bg-card); color: var(--text-muted);">
                                         <?= htmlspecialchars($f['a']) ?>
                                     </div>
                                 </div>
@@ -364,7 +388,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
     </section>
 
     <!-- FOOTER SAAS -->
-    <footer class="py-4 text-center text-muted small border-top border-secondary border-opacity-25" style="background: #070a10;">
+    <footer class="py-4 text-center text-muted small border-top" style="border-color: var(--border-color) !important; background: var(--bg-main);">
         <div class="container">
             <p class="mb-1">&copy; <?= date('Y') ?> <strong>TARGET ARCHERY SAAS PLATFORM</strong> &bull; Platform Digitalisasi Panahan Indonesia</p>
             <p class="mb-0" style="font-size: 11px; opacity: 0.7;">Powered by Codika Multi-Tenant Architecture &bull; World Archery Precision Engineering</p>
@@ -372,5 +396,25 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleAppTheme() {
+            const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('archery_theme', next);
+            updateThemeIcons(next);
+        }
+
+        function updateThemeIcons(theme) {
+            const icon = theme === 'dark' ? '🌙' : '☀️';
+            const btn = document.getElementById('themeToggleBtn');
+            if (btn) btn.textContent = icon;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            updateThemeIcons(current);
+        });
+    </script>
 </body>
 </html>
