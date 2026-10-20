@@ -17,6 +17,18 @@ if (!class_exists('TenantResolver')) {
 }
 
 $pageTitle = $pageTitle ?? 'Target Archery - Scoring & Monitoring Platform';
+
+// Resolusi Favicon Klub Aktif
+$activeFavicon = 'assets/img/default_favicon.png';
+if (isset($pdo)) {
+    $headerClubId = (int)($_SESSION['club_id'] ?? 1);
+    $stmtFav = $pdo->prepare("SELECT favicon_url FROM archery_clubs WHERE id = :cid LIMIT 1");
+    $stmtFav->execute([':cid' => $headerClubId]);
+    $favRow = $stmtFav->fetch();
+    if (!empty($favRow['favicon_url'])) {
+        $activeFavicon = $favRow['favicon_url'];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="id" data-theme="dark" data-bs-theme="dark">
@@ -24,6 +36,10 @@ $pageTitle = $pageTitle ?? 'Target Archery - Scoring & Monitoring Platform';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title><?= htmlspecialchars($pageTitle) ?></title>
+
+    <!-- Navicon & Favicon Dinamis Klub -->
+    <link rel="icon" type="image/x-icon" href="<?= htmlspecialchars($activeFavicon) ?>">
+    <link rel="shortcut icon" href="<?= htmlspecialchars($activeFavicon) ?>">
 
     <!-- 1. Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

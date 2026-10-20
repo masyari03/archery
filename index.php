@@ -88,6 +88,8 @@ foreach ($schedules as $sch) {
     <meta name="description" content="<?= htmlspecialchars($seoDesc) ?>">
     <meta name="keywords" content="<?= htmlspecialchars($seoKeywords) ?>">
     <link rel="canonical" href="<?= htmlspecialchars($canonicalUrl) ?>">
+    <link rel="icon" type="image/x-icon" href="<?= htmlspecialchars(!empty($currentTenant['favicon_url']) ? $currentTenant['favicon_url'] : 'assets/img/default_favicon.png') ?>">
+    <link rel="shortcut icon" href="<?= htmlspecialchars(!empty($currentTenant['favicon_url']) ? $currentTenant['favicon_url'] : 'assets/img/default_favicon.png') ?>">
 
     <?php if (!empty($cms['google_site_verification'])): ?>
         <meta name="google-site-verification" content="<?= htmlspecialchars($cms['google_site_verification']) ?>">
@@ -240,27 +242,23 @@ foreach ($schedules as $sch) {
 </head>
 <body>
 
-    <!-- TOP BAR: MULTI-TENANT SWITCHER & FAST CONTACT -->
+    <!-- TOP BAR RESMI IDENTITAS KLUB (EKSKLUSIF, BEBAS BOCOR SAAS) -->
     <div class="tenant-top-bar no-print">
         <div class="container d-flex flex-wrap justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-3">
                 <span class="text-muted"><i class="bi bi-geo-alt-fill text-danger"></i> <?= htmlspecialchars($currentTenant['city']) ?>, Indonesia</span>
                 <span class="text-muted d-none d-md-inline">&bull;</span>
-                <span class="text-muted d-none d-md-inline"><i class="bi bi-whatsapp text-success"></i> <?= htmlspecialchars($currentTenant['admin_wa_phone']) ?></span>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <!-- Multi-Tenant Demo Switcher -->
-                <span class="text-muted small d-none d-sm-inline">Pilih Klub:</span>
-                <select class="form-select form-select-sm py-0" style="font-size: 12px; width: auto;" onchange="location.href='index.php?club=' + this.value">
-                    <?php foreach ($allTenants as $t): ?>
-                        <option value="<?= htmlspecialchars($t['subdomain_slug'] ?: $t['club_code']) ?>" <?= $t['id'] == $tenantId ? 'selected' : '' ?>>
-                            🎯 <?= htmlspecialchars($t['club_name']) ?> (<?= htmlspecialchars($t['city']) ?>)
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <a href="master_tenants.php" class="btn btn-outline-warning btn-sm py-0 ms-2" style="font-size: 11px;">
-                    👑 Master SaaS
+                <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $currentTenant['admin_wa_phone']) ?>?text=Halo%20Admin%20<?= urlencode($currentTenant['club_name']) ?>" target="_blank" class="text-muted text-decoration-none">
+                    <i class="bi bi-whatsapp text-success"></i> <?= htmlspecialchars($currentTenant['admin_wa_phone']) ?>
                 </a>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-primary bg-opacity-25 text-info border border-info border-opacity-25">
+                    <i class="bi bi-shield-check"></i> Official Club Website
+                </span>
+                <span class="text-muted small d-none d-sm-inline">
+                    <i class="bi bi-clock"></i> Layanan: Setiap Hari 07:00 - 18:00
+                </span>
             </div>
         </div>
     </div>
@@ -268,10 +266,14 @@ foreach ($schedules as $sch) {
     <!-- MAIN NAVBAR WEB CMS -->
     <header class="nav-cms-header py-2">
         <div class="container d-flex justify-content-between align-items-center">
-            <a href="index.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="d-flex align-items-center gap-2 text-decoration-none">
-                <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style="width: 42px; height: 42px; background: var(--primary); font-size: 20px;">
-                    🎯
-                </div>
+            <a href="index.php" class="d-flex align-items-center gap-2 text-decoration-none">
+                <?php if (!empty($currentTenant['logo_url']) && $currentTenant['logo_url'] !== 'assets/img/default_logo.png'): ?>
+                    <img src="<?= htmlspecialchars($currentTenant['logo_url']) ?>" alt="Logo" style="height: 42px; max-width: 50px; object-fit: contain; border-radius: 8px;">
+                <?php else: ?>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style="width: 42px; height: 42px; background: var(--primary); font-size: 20px;">
+                        🎯
+                    </div>
+                <?php endif; ?>
                 <div>
                     <h5 class="mb-0 fw-bold brand-font" style="letter-spacing: -0.02em;"><?= htmlspecialchars($currentTenant['club_name']) ?></h5>
                     <span class="text-muted small" style="font-size: 11px;">Official Archery Club &bull; Member Platform</span>

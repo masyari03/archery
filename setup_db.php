@@ -59,6 +59,7 @@ try {
     addColumnIfNotExists($pdo, 'archery_clubs', 'city', "VARCHAR(100) DEFAULT 'Bogor'");
     addColumnIfNotExists($pdo, 'archery_clubs', 'subdomain_slug', "VARCHAR(50) DEFAULT 'annahl'");
     addColumnIfNotExists($pdo, 'archery_clubs', 'custom_domain', "VARCHAR(150) DEFAULT NULL");
+    addColumnIfNotExists($pdo, 'archery_clubs', 'favicon_url', "VARCHAR(255) DEFAULT 'assets/img/default_favicon.png'");
     echo "✔ Tabel `archery_clubs` siap dengan kolom modern & SaaS Domain Resolver.\n";
 
     // 3. Tabel archery_users (Update ENUM role with master_admin)
@@ -266,6 +267,9 @@ try {
         `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ");
+    addColumnIfNotExists($pdo, 'archery_saas_marketing_cms', 'platform_brand_name', "VARCHAR(150) DEFAULT 'TARGET ARCHERY SAAS'");
+    addColumnIfNotExists($pdo, 'archery_saas_marketing_cms', 'platform_logo_url', "VARCHAR(255) DEFAULT 'assets/img/default_logo.png'");
+    addColumnIfNotExists($pdo, 'archery_saas_marketing_cms', 'platform_favicon_url', "VARCHAR(255) DEFAULT 'assets/img/default_favicon.png'");
     echo "✔ Tabel `archery_saas_marketing_cms` siap.\n";
 
     // 4. Tabel archery_distances

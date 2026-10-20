@@ -48,6 +48,10 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
         })();
     </script>
 
+    <!-- Navicon & Favicon Platform -->
+    <link rel="icon" type="image/x-icon" href="<?= htmlspecialchars(!empty($mkt['platform_favicon_url']) ? $mkt['platform_favicon_url'] : 'assets/img/default_favicon.png') ?>">
+    <link rel="shortcut icon" href="<?= htmlspecialchars(!empty($mkt['platform_favicon_url']) ? $mkt['platform_favicon_url'] : 'assets/img/default_favicon.png') ?>">
+
     <!-- OpenGraph Meta Tags untuk Viral Sharing di WhatsApp & Medsos -->
     <meta property="og:title" content="<?= htmlspecialchars($mkt['meta_title'] ?? 'Target Archery - Software Manajemen & Scoring Panahan') ?>">
     <meta property="og:description" content="<?= htmlspecialchars($mkt['meta_description'] ?? 'Sistem digitalisasi klub panahan terlengkap di Indonesia.') ?>">
@@ -94,6 +98,13 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             position: relative;
             overflow: hidden;
+        }
+        .saas-hero-title {
+            font-size: clamp(2.1rem, 3.2vw, 3.25rem);
+            font-weight: 800;
+            line-height: 1.2;
+            letter-spacing: -0.025em;
+            max-width: 820px;
         }
         .feature-box {
             background: var(--bg-card);
@@ -144,15 +155,19 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
 </head>
 <body>
 
-    <!-- TOP HEADER SAAS PLATFORM -->
+    <!-- TOP HEADER SAAS PLATFORM (FULL WIDTH LAPTOP COMFORT) -->
     <header class="py-3 border-bottom sticky-top saas-header">
-        <div class="container d-flex justify-content-between align-items-center">
-            <a href="index.php" class="d-flex align-items-center gap-2 text-decoration-none">
-                <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary text-white fw-bold" style="width: 44px; height: 44px; font-size: 22px;">
-                    🎯
-                </div>
+        <div class="container-fluid px-3 px-lg-5 d-flex justify-content-between align-items-center" style="max-width: 1560px;">
+            <a href="saas_marketing.php" class="d-flex align-items-center gap-2 text-decoration-none">
+                <?php if (!empty($mkt['platform_logo_url']) && $mkt['platform_logo_url'] !== 'assets/img/default_logo.png'): ?>
+                    <img src="<?= htmlspecialchars($mkt['platform_logo_url']) ?>" alt="Logo" style="height: 42px; max-width: 150px; object-fit: contain;">
+                <?php else: ?>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary text-white fw-bold" style="width: 44px; height: 44px; font-size: 22px;">
+                        🎯
+                    </div>
+                <?php endif; ?>
                 <div>
-                    <h5 class="mb-0 fw-bold brand-font" style="letter-spacing: -0.02em;">TARGET ARCHERY SAAS</h5>
+                    <h5 class="mb-0 fw-bold brand-font" style="letter-spacing: -0.02em;"><?= htmlspecialchars($mkt['platform_brand_name'] ?? 'TARGET ARCHERY SAAS') ?></h5>
                     <span class="text-muted small" style="font-size: 11px;">Platform Bisnis &amp; Scoring Panahan Indonesia</span>
                 </div>
             </a>
@@ -179,18 +194,19 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
         </div>
     </header>
 
-    <!-- HERO SECTION MARKETING -->
+    <!-- HERO SECTION MARKETING (FULL WIDTH 1560PX & PRECISE 2-LINE TITLE) -->
     <section class="saas-hero text-center text-lg-start">
-        <div class="container position-relative">
+        <div class="container-fluid px-3 px-lg-5 position-relative" style="max-width: 1560px;">
             <div class="row align-items-center g-5">
                 <div class="col-lg-7">
                     <div class="badge bg-primary bg-opacity-25 text-info border border-info border-opacity-25 px-3 py-2 rounded-pill mb-3">
                         <i class="bi bi-stars"></i> <?= htmlspecialchars($heroBadge) ?>
                     </div>
-                    <h1 class="display-4 fw-extrabold text-white mb-3" style="line-height: 1.15;">
-                        <?= htmlspecialchars($heroTitle) ?>
+                    <h1 class="saas-hero-title text-white mb-3">
+                        Platform Manajemen &amp; Scoring Panahan<br class="d-none d-md-inline">
+                        <span class="text-info">Multi-Club Berstandar Resmi #1</span>
                     </h1>
-                    <p class="lead text-muted mb-4" style="font-size: 1.15rem;">
+                    <p class="lead text-muted mb-4" style="font-size: 1.15rem; max-width: 680px;">
                         <?= htmlspecialchars($heroSubtitle) ?>
                     </p>
 
@@ -217,29 +233,37 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
                                 🏹
                             </div>
                             <div>
-                                <h6 class="fw-bold mb-0">Live Simulation Portal</h6>
-                                <span class="text-muted small">Coba langsung sistem scoring klub</span>
+                                <h6 class="fw-bold mb-0 text-white">Interactive Live Demo</h6>
+                                <span class="text-muted small">Coba langsung sistem scoring tanpa registrasi</span>
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label small">Pilih Klub Contoh yang Ingin Dilihat:</label>
-                            <select class="form-select" onchange="if(this.value) window.open(this.value, '_blank')">
-                                <option value="">-- Pilih Demo Klub Panahan --</option>
-                                <?php foreach ($allTenants as $t): ?>
-                                    <option value="<?= htmlspecialchars(TenantResolver::getBaseUrl($t)) ?>">
-                                        🎯 <?= htmlspecialchars($t['club_name']) ?> (<?= htmlspecialchars($t['city']) ?>) - <?= htmlspecialchars($t['subdomain_slug']) ?>.codika.my.id
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
+                        <div class="mb-3 p-3 rounded" style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-color);">
+                            <div class="d-flex align-items-center gap-2 mb-2 text-warning small fw-bold">
+                                <i class="bi bi-key-fill"></i> AKUN UJI COBA LANGSUNG (INSTANT LOGIN)
+                            </div>
+                            <div class="d-flex flex-column gap-2 small">
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary border-opacity-25">
+                                    <span class="text-light"><i class="bi bi-person-badge-fill text-info me-1"></i> Pelatih / Coach:</span>
+                                    <code class="text-warning">coach_fadli</code>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary border-opacity-25">
+                                    <span class="text-light"><i class="bi bi-people-fill text-success me-1"></i> Orang Tua Atlet:</span>
+                                    <code class="text-warning">ortu_budi</code>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1">
+                                    <span class="text-muted"><i class="bi bi-lock-fill me-1"></i> Password Demo:</span>
+                                    <code class="text-light">password</code>
+                                </div>
+                            </div>
                         </div>
 
                         <p class="text-muted small mb-3">
-                            Setiap klub yang bermitra mendapatkan website profil publik sendiri, portal scoring, sistem ujian naik jarak, dan bot WhatsApp otomatis.
+                            Jelajahi fitur Target Plotter 10-Ring, kalkulasi arrow radius milimeter, rapor PDF A4 resmi, dan portal latihan secara instan.
                         </p>
 
-                        <a href="login.php" class="btn btn-primary w-100 fw-bold py-2">
-                            Masuk Portal Pengguna (Login)
+                        <a href="login.php" class="btn btn-primary w-100 fw-bold py-2 shadow-sm d-flex align-items-center justify-content-center gap-2">
+                            <i class="bi bi-play-circle-fill fs-5"></i> Buka Demo Sistem Sekarang
                         </a>
                     </div>
                 </div>
@@ -274,37 +298,50 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
         </div>
     </section>
 
-    <!-- SHOWCASE TENANT KLUB MITRA -->
+    <!-- SHOWCASE TENANT KLUB MITRA (OTOMATIS BERTAMBAH DARI DATABASE & DIRECT SUBDOMAIN) -->
     <section id="showcase" class="py-5" style="background: rgba(15, 23, 42, 0.4); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
         <div class="container py-4">
             <div class="text-center mb-5">
                 <span class="badge bg-warning text-dark mb-2">Tenant Showcase</span>
                 <h2 class="fw-bold text-white mb-2">Klub-Klub Panahan yang Telah Bergabung</h2>
                 <p class="text-muted mx-auto" style="max-width: 650px;">
-                    Setiap klub memiliki website independen, subdomain sendiri, dan domain kustom tanpa bercampur data.
+                    Setiap klub memiliki website independen, subdomain resmi sendiri, dan domain kustom tanpa bercampur data.
                 </p>
             </div>
 
             <div class="row g-4 justify-content-center">
                 <?php foreach ($allTenants as $t): ?>
-                    <div class="col-md-5 col-lg-4">
-                        <div class="tenant-card">
+                    <?php 
+                        $directClubUrl = TenantResolver::getBaseUrl($t);
+                        $clubDomainDisplay = !empty($t['custom_domain']) ? $t['custom_domain'] : ($t['subdomain_slug'] . '.codika.my.id');
+                    ?>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="tenant-card shadow-sm">
                             <div>
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <span class="badge bg-secondary"><?= htmlspecialchars($t['city']) ?></span>
-                                    <span class="badge bg-success">Tenant Aktif</span>
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <span class="badge bg-secondary"><i class="bi bi-geo-alt-fill text-danger"></i> <?= htmlspecialchars($t['city'] ?: 'Indonesia') ?></span>
+                                    <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25"><i class="bi bi-check-circle-fill"></i> Tenant Aktif</span>
                                 </div>
-                                <h4 class="fw-bold text-white mb-1"><?= htmlspecialchars($t['club_name']) ?></h4>
-                                <span class="text-info small fw-bold d-block mb-3">
-                                    🌐 <?= htmlspecialchars($t['subdomain_slug']) ?>.archery.codika.my.id
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <?php if (!empty($t['logo_url']) && $t['logo_url'] !== 'assets/img/default_logo.png'): ?>
+                                        <img src="<?= htmlspecialchars($t['logo_url']) ?>" alt="Logo" style="width: 36px; height: 36px; object-fit: contain; border-radius: 6px;">
+                                    <?php else: ?>
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary text-white fw-bold" style="width: 36px; height: 36px; font-size: 18px;">
+                                            🎯
+                                        </div>
+                                    <?php endif; ?>
+                                    <h4 class="fw-bold text-white mb-0 fs-5"><?= htmlspecialchars($t['club_name']) ?></h4>
+                                </div>
+                                <span class="text-info small fw-bold d-block mb-3 font-monospace">
+                                    🌐 <?= htmlspecialchars($clubDomainDisplay) ?>
                                 </span>
-                                <p class="text-muted small mb-4">
-                                    Klub panahan resmi dengan kurikulum berjenjang 5m - 50m dan scoring digital real-time.
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    <?= htmlspecialchars(!empty($t['address']) ? (strlen($t['address']) > 90 ? substr($t['address'], 0, 90) . '...' : $t['address']) : 'Klub panahan resmi dengan kurikulum berjenjang dan scoring digital real-time.') ?>
                                 </p>
                             </div>
                             <div class="pt-3 border-top border-secondary border-opacity-25">
-                                <a href="index.php?club=<?= urlencode($t['subdomain_slug']) ?>" target="_blank" class="btn btn-outline-warning w-100 fw-bold">
-                                    <i class="bi bi-box-arrow-up-right"></i> Buka Website Resmi Klub
+                                <a href="<?= htmlspecialchars($directClubUrl) ?>" target="_blank" class="btn btn-outline-warning w-100 fw-bold d-flex align-items-center justify-content-center gap-2">
+                                    <i class="bi bi-box-arrow-up-right"></i> Kunjungi Website Resmi Klub
                                 </a>
                             </div>
                         </div>

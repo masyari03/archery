@@ -29,18 +29,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $primaryColor = trim($_POST['primary_color'] ?? '#0284c7');
         $themeMode = in_array($_POST['theme_mode'] ?? '', ['dark', 'light']) ? $_POST['theme_mode'] : 'dark';
 
+        $logoUrlInput = trim($_POST['logo_url'] ?? '');
+        $faviconUrlInput = trim($_POST['favicon_url'] ?? '');
+
         // Handle File Upload Logo jika ada
-        $logoUrl = null;
+        $logoUrl = !empty($logoUrlInput) ? $logoUrlInput : null;
         if (isset($_FILES['club_logo']) && $_FILES['club_logo']['error'] === UPLOAD_ERR_OK) {
             $file = $_FILES['club_logo'];
-            $allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+            $allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
             $fileInfo = finfo_open(FILEINFO_MIME_TYPE);
             $mime = finfo_file($fileInfo, $file['tmp_name']);
             finfo_close($fileInfo);
 
             if (in_array($mime, $allowedTypes) && $file['size'] <= 2 * 1024 * 1024) {
                 $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-                $newName = 'logo_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . strtolower($ext);
+                $newName = 'logo_' . $clubId . '_' . time() . '_' . bin2hex(random_bytes(3)) . '.' . strtolower($ext);
                 $uploadDir = __DIR__ . '/assets/img/';
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0755, true);
@@ -50,61 +53,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $logoUrl = 'assets/img/' . $newName;
                 }
             } else {
-                $alertMsg = "Format logo tidak valid (harus PNG/JPG/WEBP) atau ukuran melebihi 2MB.";
+                $alertMsg = "Format logo tidak valid (harus PNG/JPG/WEBP/SVG) atau ukuran melebihi 2MB.";
+                $alertType = 'danger';
+            }
+        }
+
+        // Handle File Upload Navicon / Favicon Tab Browser jika ada
+        $faviconUrl = !empty($faviconUrlInput) ? $faviconUrlInput : null;
+        if (isset($_FILES['club_favicon']) && $_FILES['club_favicon']['error'] === UPLOAD_ERR_OK) {
+            $fileFav = $_FILES['club_favicon'];
+            $ext = strtolower(pathinfo($fileFav['name'], PATHINFO_EXTENSION));
+            $allowedFavExts = ['ico', 'png', 'svg', 'webp', 'jpg', 'jpeg'];
+
+            if (in_array($ext, $allowedFavExts) && $fileFav['size'] <= 1 * 1024 * 1024) {
+                $newNameFav = 'favicon_' . $clubId . '_' . time() . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
+                $uploadDir = __DIR__ . '/assets/img/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                $destPathFav = $uploadDir . $newNameFav;
+                if (move_uploaded_file($fileFav['tmp_name'], $destPathFav)) {
+                    $faviconUrl = 'assets/img/' . $newNameFav;
+                }
+            } else {
+                $alertMsg = "Format navicon/favicon tidak valid (ICO/PNG/SVG/WEBP) atau ukuran melebihi 1MB.";
                 $alertType = 'danger';
             }
         }
 
         if (!$alertMsg) {
             try {
-                if ($logoUrl) {
-                    $stmtUp = $pdo->prepare("
-                        UPDATE archery_clubs 
-                        SET club_name = :cname, 
-                            chairman_name = :chair, 
-                            address = :addr, 
-                            phone = :ph, 
-                            admin_wa_phone = :waph, 
-                            primary_color = :color, 
-                            theme_mode = :th,
-                            logo_url = :logo
-                        WHERE id = :cid
-                    ");
-                    $stmtUp->execute([
-                        ':cname' => $clubName,
-                        ':chair' => $chairmanName,
-                        ':addr' => $address,
-                        ':ph' => $phone,
-                        ':waph' => $adminWaPhone,
-                        ':color' => $primaryColor,
-                        ':th' => $themeMode,
-                        ':logo' => $logoUrl,
-                        ':cid' => $clubId
-                    ]);
-                } else {
-                    $stmtUp = $pdo->prepare("
-                        UPDATE archery_clubs 
-                        SET club_name = :cname, 
-                            chairman_name = :chair, 
-                            address = :addr, 
-                            phone = :ph, 
-                            admin_wa_phone = :waph, 
-                            primary_color = :color, 
-                            theme_mode = :th
-                        WHERE id = :cid
-                    ");
-                    $stmtUp->execute([
-                        ':cname' => $clubName,
-                        ':chair' => $chairmanName,
-                        ':addr' => $address,
-                        ':ph' => $phone,
-                        ':waph' => $adminWaPhone,
-                        ':color' => $primaryColor,
-                        ':th' => $themeMode,
-                        ':cid' => $clubId
-                    ]);
+                $params = [
+                    ':cname' => $clubName,
+                    ':chair' => $chairmanName,
+                    ':addr' => $address,
+                    ':ph' => $phone,
+                    ':waph' => $adminWaPhone,
+                    ':color' => $primaryColor,
+                    ':th' => $themeMode,
+                    ':cid' => $clubId
+                ];
+
+                $sqlExtra = "";
+                if ($logoUrl !== null) {
+                    $sqlExtra .= ", logo_url = :logo";
+                    $params[':logo'] = $logoUrl;
                 }
-                $alertMsg = "✔ Profil klub & branding berhasil diperbarui!";
+                if ($faviconUrl !== null) {
+                    $sqlExtra .= ", favicon_url = :favicon";
+                    $params[':favicon'] = $faviconUrl;
+                }
+
+                $stmtUp = $pdo->prepare("
+                    UPDATE archery_clubs 
+                    SET club_name = :cname, 
+                        chairman_name = :chair, 
+                        address = :addr, 
+                        phone = :ph, 
+                        admin_wa_phone = :waph, 
+                        primary_color = :color, 
+                        theme_mode = :th
+                        $sqlExtra
+                    WHERE id = :cid
+                ");
+                $stmtUp->execute($params);
+                $alertMsg = "✔ Profil klub, logo & navicon tab browser berhasil diperbarui!";
             } catch (PDOException $e) {
                 $alertMsg = "Gagal memperbarui profil: " . $e->getMessage();
                 $alertType = 'danger';
@@ -294,15 +307,16 @@ require_once __DIR__ . '/views/header.php';
                 </div>
             </div>
 
-            <!-- TEMA & WARNA DASAR -->
+            <!-- IDENTITAS VISUAL: WARNA, LOGO & NAVICON -->
             <div class="card" style="margin-bottom: 1.5rem;">
                 <div class="card-header">
-                    <h2 class="card-title">Warna Dasar & Logo Klub</h2>
+                    <h2 class="card-title">🎨 Identitas Visual, Logo &amp; Navicon (Favicon) Browser</h2>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                    <!-- WARNA UTAMA -->
                     <div class="form-group">
-                        <label class="form-label">Warna Utama (Primary Color):</label>
+                        <label class="form-label fw-bold">Warna Utama (Primary Color):</label>
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
                             <input type="color" name="primary_color" id="primaryColorInput" value="<?= htmlspecialchars($club['primary_color']) ?>" style="width: 50px; height: 42px; border: none; cursor: pointer; border-radius: var(--radius-sm); background: transparent;">
                             <input type="text" id="primaryColorHex" class="form-control" value="<?= htmlspecialchars($club['primary_color']) ?>" style="width: 120px;" oninput="document.getElementById('primaryColorInput').value = this.value">
@@ -316,21 +330,45 @@ require_once __DIR__ . '/views/header.php';
                         </div>
                     </div>
 
+                    <!-- LOGO KLUB -->
                     <div class="form-group">
-                        <label class="form-label">Upload Logo Klub (Format PNG / JPG / WEBP, Max 2MB):</label>
-                        <input type="file" class="form-control" name="club_logo" accept="image/png, image/jpeg, image/webp">
-                        <?php if (!empty($club['logo_url'])): ?>
-                            <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 0.75rem; color: var(--text-dim);">Logo saat ini:</span>
-                                <img src="<?= htmlspecialchars($club['logo_url']) ?>" alt="Logo Klub" style="height: 36px; border-radius: 4px; background: rgba(255,255,255,0.05); padding: 2px;">
+                        <label class="form-label fw-bold">Logo Resmi Klub:</label>
+                        <div class="mb-2">
+                            <input type="text" class="form-control mb-2" name="logo_url" id="logoUrlInput" value="<?= htmlspecialchars($club['logo_url'] ?? '') ?>" placeholder="URL Logo (misal: assets/img/logo.png atau URL web)">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary">Upload File:</span>
+                                <input type="file" class="form-control form-control-sm" name="club_logo" accept="image/png, image/jpeg, image/webp, image/svg+xml">
                             </div>
-                        <?php endif; ?>
+                        </div>
+                        <div class="p-2 rounded d-flex align-items-center gap-3" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);">
+                            <span style="font-size: 0.75rem; color: var(--text-dim);">Live Logo:</span>
+                            <img src="<?= htmlspecialchars(!empty($club['logo_url']) ? $club['logo_url'] : 'assets/img/default_logo.png') ?>" alt="Logo Preview" id="logoLivePreview" style="height: 40px; max-width: 120px; object-fit: contain; border-radius: 4px; background: rgba(0,0,0,0.3); padding: 3px;">
+                        </div>
+                    </div>
+
+                    <!-- NAVICON / FAVICON BROWSER -->
+                    <div class="form-group">
+                        <label class="form-label fw-bold">Navicon / Favicon Tab Browser:</label>
+                        <div class="mb-2">
+                            <input type="text" class="form-control mb-2" name="favicon_url" id="faviconUrlInput" value="<?= htmlspecialchars($club['favicon_url'] ?? '') ?>" placeholder="URL Favicon (misal: assets/img/favicon.png atau .ico)">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary">Upload File:</span>
+                                <input type="file" class="form-control form-control-sm" name="club_favicon" accept="image/x-icon, image/png, image/svg+xml, image/webp">
+                            </div>
+                        </div>
+                        <div class="p-2 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);">
+                            <span style="font-size: 0.72rem; color: var(--text-dim); display: block; margin-bottom: 4px;">Simulasi Tampilan Tab Browser:</span>
+                            <div class="d-flex align-items-center gap-2 px-3 py-1 rounded" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1); width: fit-content;">
+                                <img src="<?= htmlspecialchars(!empty($club['favicon_url']) ? $club['favicon_url'] : 'assets/img/default_favicon.png') ?>" alt="Favicon Preview" style="width: 18px; height: 18px; object-fit: contain;">
+                                <span style="font-size: 0.8rem; color: #e2e8f0; font-weight: 600;"><?= htmlspecialchars($club['club_name']) ?></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div style="margin-top: 1rem;">
+                <div style="margin-top: 1.5rem;">
                     <button type="submit" class="btn btn-primary" style="padding: 0.75rem 2rem;">
-                        💾 Simpan Profil & Branding
+                        💾 Simpan Profil &amp; Branding Lengkap
                     </button>
                 </div>
             </div>

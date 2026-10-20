@@ -31,30 +31,7 @@ class TenantResolver {
         // Hapus port jika ada (contoh: localhost:3008 -> localhost)
         $cleanHost = preg_replace('/:\d+$/', '', $host);
 
-        // 1. Cek Query Param ?club=slug
-        if (!empty($_GET['club'])) {
-            $slug = trim($_GET['club']);
-            $stmt = $pdo->prepare("SELECT * FROM archery_clubs WHERE (subdomain_slug = :slug1 OR club_code = :slug2) AND is_active = 1 LIMIT 1");
-            $stmt->execute([':slug1' => $slug, ':slug2' => $slug]);
-            $tenant = $stmt->fetch();
-            if ($tenant) {
-                $_SESSION['current_tenant_id'] = $tenant['id'];
-                self::$cachedTenant = $tenant;
-                return $tenant;
-            }
-        }
-
-        // 2. Cek Custom Domain
-        $stmt = $pdo->prepare("SELECT * FROM archery_clubs WHERE custom_domain = :domain AND is_active = 1 LIMIT 1");
-        $stmt->execute([':domain' => $cleanHost]);
-        $tenant = $stmt->fetch();
-        if ($tenant) {
-            $_SESSION['current_tenant_id'] = $tenant['id'];
-            self::$cachedTenant = $tenant;
-            return $tenant;
-        }
-
-        // 3. Cek Subdomain Level 1 (misal: annahl.codika.my.id -> slug: annahl, atau annahl-archery.codika.my.id)
+        // 1. PRIORITAS UTAMA: Cek Subdomain Level 1 (misal: annahl.codika.my.id -> slug: annahl)
         $parts = explode('.', $cleanHost);
         if (count($parts) >= 3) {
             $subdomain = $parts[0];
@@ -74,6 +51,29 @@ class TenantResolver {
                     self::$cachedTenant = $tenant;
                     return $tenant;
                 }
+            }
+        }
+
+        // 2. PRIORITAS DUA: Cek Custom Domain Klien Mandiri
+        $stmt = $pdo->prepare("SELECT * FROM archery_clubs WHERE custom_domain = :domain AND is_active = 1 LIMIT 1");
+        $stmt->execute([':domain' => $cleanHost]);
+        $tenant = $stmt->fetch();
+        if ($tenant) {
+            $_SESSION['current_tenant_id'] = $tenant['id'];
+            self::$cachedTenant = $tenant;
+            return $tenant;
+        }
+
+        // 3. PRIORITAS TIGA: Cek Query Param ?club=slug (HANYA DIIZINKAN DI DOMAIN ROOT PLATFORM / LOCALHOST)
+        if (!empty($_GET['club']) && (self::isPlatformRoot($cleanHost) || in_array($cleanHost, ['localhost', '127.0.0.1']))) {
+            $slug = trim($_GET['club']);
+            $stmt = $pdo->prepare("SELECT * FROM archery_clubs WHERE (subdomain_slug = :slug1 OR club_code = :slug2) AND is_active = 1 LIMIT 1");
+            $stmt->execute([':slug1' => $slug, ':slug2' => $slug]);
+            $tenant = $stmt->fetch();
+            if ($tenant) {
+                $_SESSION['current_tenant_id'] = $tenant['id'];
+                self::$cachedTenant = $tenant;
+                return $tenant;
             }
         }
 

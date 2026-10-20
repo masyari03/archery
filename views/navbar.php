@@ -41,7 +41,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
 // Ambil data klub aktif
 $activeClubId = (int)($_SESSION['club_id'] ?? 1);
-$stmtClub = $pdo->prepare("SELECT club_name, primary_color, subdomain_slug FROM archery_clubs WHERE id = :cid LIMIT 1");
+$stmtClub = $pdo->prepare("SELECT club_name, primary_color, subdomain_slug, logo_url, favicon_url FROM archery_clubs WHERE id = :cid LIMIT 1");
 $stmtClub->execute([':cid' => $activeClubId]);
 $clubMeta = $stmtClub->fetch();
 $primaryColor = $clubMeta['primary_color'] ?? '#0284c7';
@@ -196,7 +196,11 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
         <!-- SISI KIRI: BRAND & CHILD SWITCHER -->
         <div class="d-flex align-items-center gap-3">
             <a href="<?= Auth::check() ? 'app_dashboard.php' : 'index.php' ?>" class="nav-brand-wrap">
-                <div class="brand-target-icon">🎯</div>
+                <?php if (!empty($clubMeta['logo_url']) && $clubMeta['logo_url'] !== 'assets/img/default_logo.png'): ?>
+                    <img src="<?= htmlspecialchars($clubMeta['logo_url']) ?>" alt="Logo" style="height: 34px; max-width: 44px; object-fit: contain; border-radius: 6px;">
+                <?php else: ?>
+                    <div class="brand-target-icon">🎯</div>
+                <?php endif; ?>
                 <div>
                     <div style="font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.05rem; letter-spacing: -0.01em; line-height: 1.1;">
                         TARGET ARCHERY
