@@ -168,26 +168,6 @@ end_login_handler:
             color: #fff;
             box-shadow: 0 2px 10px rgba(2, 132, 199, 0.4);
         }
-        .demo-box {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px dashed var(--border-color);
-            border-radius: var(--radius-sm);
-            padding: 0.85rem;
-            margin-top: 1.5rem;
-            font-size: 0.78rem;
-            color: var(--text-muted);
-        }
-        .demo-btn {
-            background: var(--primary-light);
-            border: 1px solid var(--border-glow);
-            color: var(--primary);
-            padding: 3px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.75rem;
-            font-weight: 700;
-            margin: 2px;
-        }
     </style>
 </head>
 <body>
