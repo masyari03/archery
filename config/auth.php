@@ -7,6 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/activity_logger.php';
 
 class Auth {
     /**
@@ -29,7 +30,9 @@ class Auth {
             'full_name' => $_SESSION['full_name'] ?? '',
             'role' => $_SESSION['role'] ?? 'parent',
             'phone' => $_SESSION['phone'] ?? '',
-            'club_id' => $_SESSION['club_id'] ?? 1
+            'email' => $_SESSION['email'] ?? '',
+            'club_id' => (int)($_SESSION['club_id'] ?? 1),
+            'avatar_url' => $_SESSION['avatar_url'] ?? null
         ];
     }
 
@@ -109,12 +112,47 @@ class Auth {
     }
 
     /**
-     * Wajib Login Guard
+     * Wajib Login Guard dengan Cek Pemutusan Sesi (Kill Session) & Isolasi Multi-Tenant
      */
     public static function requireAuth(string $redirect = 'login.php'): void {
+        global $pdo;
+
         if (!self::check()) {
             header("Location: {$redirect}");
             exit;
+        }
+
+        // 1. Cek apakah sesi telah diputus (revoked) oleh Master Admin
+        if (isset($pdo) && ActivityLogger::isSessionRevoked($pdo)) {
+            $_SESSION = [];
+            if (ini_get("session.use_cookies")) {
+                $params = session_get_cookie_params();
+                setcookie(session_name(), '', time() - 42000, $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+            }
+            session_destroy();
+            header("Location: {$redirect}?error=session_terminated");
+            exit;
+        }
+
+        // 2. Strict Multi-Tenant Boundary: cegah user tenant A mengakses portal tenant B
+        $userRole = $_SESSION['role'] ?? 'parent';
+        if ($userRole !== 'master_admin' && isset($pdo)) {
+            require_once __DIR__ . '/tenant_resolver.php';
+            $currentTenant = TenantResolver::resolve($pdo);
+            $tenantId = (int)$currentTenant['id'];
+            $userClubId = (int)($_SESSION['club_id'] ?? 0);
+
+            if ($userClubId !== $tenantId) {
+                // Logout paksa dari tenant yang salah
+                $_SESSION = [];
+                if (ini_get("session.use_cookies")) {
+                    $params = session_get_cookie_params();
+                    setcookie(session_name(), '', time() - 42000, $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+                }
+                session_destroy();
+                header("Location: {$redirect}?error=wrong_tenant");
+                exit;
+            }
         }
     }
 

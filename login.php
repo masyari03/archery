@@ -5,6 +5,15 @@ require_once __DIR__ . '/config/tenant_resolver.php';
 
 $error = '';
 
+// Handle Error Redirect dari Middleware
+if (isset($_GET['error'])) {
+    if ($_GET['error'] === 'wrong_tenant') {
+        $error = 'Sesi Anda terputus karena akun Anda tidak terdaftar di klub ini. Silakan login di portal resmi klub Anda.';
+    } elseif ($_GET['error'] === 'session_terminated') {
+        $error = 'Sesi login Anda telah diputus oleh Administrator demi keamanan. Silakan login kembali.';
+    }
+}
+
 // Resolusi Tenant Dinamis dari Subdomain Host
 $currentTenant = TenantResolver::resolve($pdo);
 $tenantId = (int)$currentTenant['id'];
@@ -13,13 +22,45 @@ $clubName = $currentTenant['club_name'] ?? 'AN-NAHL ARCHERY CLUB';
 $clubLogo = $currentTenant['logo_url'] ?? '';
 $clubFavicon = $currentTenant['favicon_url'] ?? 'assets/img/default_favicon.png';
 
+// Auto-Login via Cookie "Ingat Saya"
+if (!Auth::check() && !empty($_COOKIE['archery_remember'])) {
+    $parts = explode(':', $_COOKIE['archery_remember']);
+    if (count($parts) === 2) {
+        $rawTok = $parts[0];
+        $uid = (int)$parts[1];
+        $tokHash = hash('sha256', $rawTok);
+
+        $stmtAuto = $pdo->prepare("SELECT * FROM archery_users WHERE id = :uid AND remember_token = :tok AND remember_expires_at > NOW() AND is_active = 1 LIMIT 1");
+        $stmtAuto->execute([':uid' => $uid, ':tok' => $tokHash]);
+        $autoUser = $stmtAuto->fetch();
+
+        if ($autoUser && (int)$autoUser['club_id'] === $tenantId && $autoUser['role'] !== 'master_admin') {
+            $_SESSION['user_id'] = $autoUser['id'];
+            $_SESSION['username'] = $autoUser['username'];
+            $_SESSION['full_name'] = $autoUser['full_name'];
+            $_SESSION['role'] = $autoUser['role'];
+            $_SESSION['phone'] = $autoUser['phone'];
+            $_SESSION['email'] = $autoUser['email'] ?? '';
+            $_SESSION['club_id'] = (int)$autoUser['club_id'];
+            $_SESSION['avatar_url'] = $autoUser['avatar_url'] ?? null;
+
+            ActivityLogger::recordSession($pdo, (int)$autoUser['id'], $autoUser['username'], $autoUser['role'], (int)$autoUser['club_id']);
+            ActivityLogger::log($pdo, (int)$autoUser['club_id'], (int)$autoUser['id'], $autoUser['username'], $autoUser['role'], 'AUTO_LOGIN', "Login otomatis via token Ingat Saya");
+
+            header('Location: app_dashboard.php');
+            exit;
+        }
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $loginType = $_POST['login_type'] ?? 'user';
 
-    // 1. Login Akun Normal (Ortu, Coach, Admin)
+    // 1. Login Akun Normal (Ortu, Coach, Admin Klub)
     if ($loginType === 'user') {
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
+        $rememberMe = !empty($_POST['remember_me']);
 
         if (!empty($username) && !empty($password)) {
             $stmt = $pdo->prepare("SELECT * FROM archery_users WHERE (username = :u OR phone = :p OR email = :e) AND is_active = 1 LIMIT 1");
@@ -27,17 +68,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->fetch();
 
             if ($user && password_verify($password, $user['password_hash'])) {
-                // Multi-Tenant Boundary: Jika bukan master_admin dan login di subdomain spesifik klub lain
-                if ($user['role'] !== 'master_admin' && !TenantResolver::isPlatformRoot()) {
-                    if ((int)$user['club_id'] !== $tenantId) {
-                        $userClubStmt = $pdo->prepare("SELECT club_name, subdomain_slug FROM archery_clubs WHERE id = :cid LIMIT 1");
-                        $userClubStmt->execute([':cid' => $user['club_id']]);
-                        $userClub = $userClubStmt->fetch();
-                        $correctDomain = $userClub ? TenantResolver::getBaseUrl($userClub) . '/login.php' : 'login.php';
+                // Multi-Tenant Guard 1: Master Admin dilarang login di portal tenant klub biasa
+                if ($user['role'] === 'master_admin') {
+                    $error = "Akun Master Admin Platform wajib login melalui gerbang otentikasi khusus Master Admin.";
+                    ActivityLogger::log($pdo, (int)$user['club_id'], $user['id'], $user['username'], $user['role'], 'LOGIN_REJECTED', "Mencoba login di portal klub tenant {$clubName}");
+                    goto end_login_handler;
+                }
 
-                        $error = "Akun Anda terdaftar di <b>" . htmlspecialchars($userClub['club_name'] ?? 'Klub Lain') . "</b>. Silakan login di portal klub Anda: <a href='{$correctDomain}' class='text-warning text-decoration-underline'>{$correctDomain}</a>";
-                        goto end_login_handler;
-                    }
+                // Multi-Tenant Guard 2: Cegah mutlak login lintas tenant / beda sekolah
+                if ((int)$user['club_id'] !== $tenantId) {
+                    $userClubStmt = $pdo->prepare("SELECT club_name, subdomain_slug, custom_domain FROM archery_clubs WHERE id = :cid LIMIT 1");
+                    $userClubStmt->execute([':cid' => $user['club_id']]);
+                    $userClub = $userClubStmt->fetch();
+                    $correctDomain = $userClub ? TenantResolver::getBaseUrl($userClub) . '/login.php' : 'login.php';
+
+                    $error = "Akses Ditolak: Akun Anda terdaftar di <b>" . htmlspecialchars($userClub['club_name'] ?? 'Klub Lain') . "</b>. Anda tidak diizinkan masuk ke portal <b>" . htmlspecialchars($clubName) . "</b>.<br><a href='{$correctDomain}' class='btn btn-warning btn-sm mt-2 fw-bold text-dark'>Buka Portal " . htmlspecialchars($userClub['club_name'] ?? 'Klub Anda') . "</a>";
+                    ActivityLogger::log($pdo, $tenantId, $user['id'], $user['username'], $user['role'], 'CROSS_TENANT_REJECTED', "Mencoba login ke tenant {$clubName} (ID: {$tenantId}), padahal terdaftar di tenant ID: {$user['club_id']}");
+                    goto end_login_handler;
                 }
 
                 $_SESSION['user_id'] = $user['id'];
@@ -45,7 +92,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['full_name'] = $user['full_name'];
                 $_SESSION['role'] = $user['role'];
                 $_SESSION['phone'] = $user['phone'];
+                $_SESSION['email'] = $user['email'] ?? '';
                 $_SESSION['club_id'] = (int)$user['club_id'];
+                $_SESSION['avatar_url'] = $user['avatar_url'] ?? null;
+
+                // Handle "Ingat Saya" Token & Durasi Cache Sesi
+                if ($rememberMe) {
+                    $rememberDays = (int)($currentTenant['session_remember_days'] ?? 7);
+                    if ($rememberDays <= 0) $rememberDays = 7;
+                    $expireTime = time() + ($rememberDays * 86400);
+                    $tokenRaw = bin2hex(random_bytes(32));
+                    $tokenHash = hash('sha256', $tokenRaw);
+
+                    $stmtTok = $pdo->prepare("UPDATE archery_users SET remember_token = :tok, remember_expires_at = :exp WHERE id = :uid");
+                    $stmtTok->execute([
+                        ':tok' => $tokenHash,
+                        ':exp' => date('Y-m-d H:i:s', $expireTime),
+                        ':uid' => $user['id']
+                    ]);
+
+                    setcookie('archery_remember', $tokenRaw . ':' . $user['id'], [
+                        'expires' => $expireTime,
+                        'path' => '/',
+                        'httponly' => true,
+                        'samesite' => 'Lax'
+                    ]);
+                }
+
+                // Catat sesi login aktif & audit trail
+                ActivityLogger::recordSession($pdo, (int)$user['id'], $user['username'], $user['role'], (int)$user['club_id']);
+                ActivityLogger::log($pdo, (int)$user['club_id'], (int)$user['id'], $user['username'], $user['role'], 'LOGIN', "Berhasil login ke portal {$clubName}");
 
                 // Set anak aktif pertama jika orang tua
                 $children = Auth::getChildren($pdo);
@@ -54,9 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 // Redirect sesuai role secara aman
-                if ($user['role'] === 'master_admin') {
-                    header('Location: master_tenants.php');
-                } elseif ($user['role'] === 'super_admin') {
+                if ($user['role'] === 'super_admin') {
                     header('Location: app_dashboard.php');
                 } elseif ($user['role'] === 'coach') {
                     header('Location: coach_dashboard.php');
@@ -81,8 +155,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $archer = $stmt->fetch();
 
             if ($archer) {
-                if (!TenantResolver::isPlatformRoot() && (int)$archer['club_id'] !== $tenantId) {
+                // Strict multi-tenant check for PIN
+                if ((int)$archer['club_id'] !== $tenantId) {
                     $error = 'PIN akses atlet ini terdaftar di klub lain. Silakan login di portal resmi klub yang sesuai.';
+                    ActivityLogger::log($pdo, $tenantId, (int)$archer['id'], $archer['nis'], 'archer', 'CROSS_TENANT_PIN_REJECTED', "PIN atlet ditolak karena berbeda klub");
                     goto end_login_handler;
                 }
 
@@ -91,6 +167,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['full_name'] = $archer['full_name'];
                 $_SESSION['active_child_id'] = $archer['id'];
                 $_SESSION['club_id'] = (int)$archer['club_id'];
+
+                ActivityLogger::recordSession($pdo, (int)$archer['id'], $archer['nis'], 'archer', (int)$archer['club_id']);
+                ActivityLogger::log($pdo, (int)$archer['club_id'], (int)$archer['id'], $archer['full_name'], 'archer', 'PIN_LOGIN', "Login perangkat scoring atlet");
 
                 header('Location: app_dashboard.php');
                 exit;
@@ -213,7 +292,16 @@ end_login_handler:
                 <label class="form-label">Kata Sandi (Password)</label>
                 <input type="password" name="password" class="form-control" id="passInput" placeholder="••••••••" required>
             </div>
-            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin: 0; font-size: 0.82rem; color: var(--text-muted);">
+                    <input type="checkbox" name="remember_me" value="1" checked style="width: 16px; height: 16px; accent-color: var(--primary);">
+                    <span>Ingat saya di perangkat ini</span>
+                </label>
+                <span style="font-size: 0.72rem; color: var(--text-dim); background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 999px;">
+                    Sesi: <?= (int)($currentTenant['session_remember_days'] ?? 7) ?> Hari
+                </span>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
                 Masuk ke Dashboard ➔
             </button>
         </form>

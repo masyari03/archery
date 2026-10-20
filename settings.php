@@ -81,6 +81,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        $sessionRememberDays = (int)($_POST['session_remember_days'] ?? 7);
+        if (!in_array($sessionRememberDays, [1, 3, 7, 14, 30])) {
+            $sessionRememberDays = 7;
+        }
+
         if (!$alertMsg) {
             try {
                 $params = [
@@ -91,6 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':waph' => $adminWaPhone,
                     ':color' => $primaryColor,
                     ':th' => $themeMode,
+                    ':srd' => $sessionRememberDays,
                     ':cid' => $clubId
                 ];
 
@@ -112,12 +118,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         phone = :ph, 
                         admin_wa_phone = :waph, 
                         primary_color = :color, 
-                        theme_mode = :th
+                        theme_mode = :th,
+                        session_remember_days = :srd
                         $sqlExtra
                     WHERE id = :cid
                 ");
                 $stmtUp->execute($params);
-                $alertMsg = "✔ Profil klub, logo & navicon tab browser berhasil diperbarui!";
+                $alertMsg = "✔ Profil klub, logo, navicon tab browser & masa aktif sesi berhasil diperbarui!";
             } catch (PDOException $e) {
                 $alertMsg = "Gagal memperbarui profil: " . $e->getMessage();
                 $alertType = 'danger';
@@ -363,6 +370,34 @@ require_once __DIR__ . '/views/header.php';
                                 <span style="font-size: 0.8rem; color: #e2e8f0; font-weight: 600;"><?= htmlspecialchars($club['club_name']) ?></span>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- DURASI SESI INGAT SAYA (LOGIN CACHE) -->
+                <div class="mt-4 pt-3 border-top" style="border-color: var(--border-color) !important;">
+                    <h3 style="font-size: 1rem; color: #fff; margin-bottom: 0.5rem;">
+                        ⏱️ Pengaturan Masa Aktif "Ingat Saya" (Cache Sesi Login)
+                    </h3>
+                    <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                        Tentukan berapa lama perangkat atlet &amp; wali murid tetap terautentikasi otomatis tanpa harus memasukkan kata sandi berulang kali saat opsi "Ingat Saya" dicentang.
+                    </p>
+                    <div style="max-width: 320px;">
+                        <label class="form-label fw-bold">Durasi Aktif Sesi:</label>
+                        <select name="session_remember_days" class="form-control">
+                            <?php 
+                            $curDays = (int)($club['session_remember_days'] ?? 7);
+                            $durations = [
+                                1 => '1 Hari (Sangat Ketat)',
+                                3 => '3 Hari',
+                                7 => '7 Hari (Rekomendasi Standar)',
+                                14 => '14 Hari (2 Pekan)',
+                                30 => '30 Hari (1 Bulan Penuh)'
+                            ];
+                            foreach ($durations as $val => $label):
+                            ?>
+                                <option value="<?= $val ?>" <?= $curDays === $val ? 'selected' : '' ?>><?= $label ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                 </div>
 

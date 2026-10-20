@@ -272,6 +272,59 @@ try {
     addColumnIfNotExists($pdo, 'archery_saas_marketing_cms', 'platform_favicon_url', "VARCHAR(255) DEFAULT 'assets/img/default_favicon.png'");
     echo "✔ Tabel `archery_saas_marketing_cms` siap.\n";
 
+    // 3l. Tabel archery_activity_logs (Audit Trail Aktivitas Seluruh Tenant)
+    $pdo->exec("
+    CREATE TABLE IF NOT EXISTS `archery_activity_logs` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `club_id` INT DEFAULT 1,
+        `user_id` INT DEFAULT NULL,
+        `username` VARCHAR(100) DEFAULT NULL,
+        `user_role` VARCHAR(50) DEFAULT NULL,
+        `action_type` VARCHAR(50) NOT NULL,
+        `action_description` TEXT NOT NULL,
+        `ip_address` VARCHAR(50) DEFAULT NULL,
+        `user_agent` TEXT DEFAULT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX (`club_id`),
+        INDEX (`user_id`),
+        INDEX (`action_type`),
+        INDEX (`created_at`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ");
+    echo "✔ Tabel `archery_activity_logs` siap.\n";
+
+    // 3m. Tabel archery_user_sessions (Manajemen Sesi Pengguna & Fitur Putus Sesi)
+    $pdo->exec("
+    CREATE TABLE IF NOT EXISTS `archery_user_sessions` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `session_id` VARCHAR(128) NOT NULL UNIQUE,
+        `user_id` INT NOT NULL,
+        `username` VARCHAR(100) NOT NULL,
+        `user_role` VARCHAR(50) NOT NULL,
+        `club_id` INT NOT NULL,
+        `ip_address` VARCHAR(50) DEFAULT NULL,
+        `user_agent` TEXT DEFAULT NULL,
+        `login_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `last_activity_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `is_revoked` TINYINT(1) DEFAULT 0,
+        INDEX (`user_id`),
+        INDEX (`club_id`),
+        INDEX (`is_revoked`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ");
+    echo "✔ Tabel `archery_user_sessions` siap.\n";
+
+    addColumnIfNotExists($pdo, 'archery_users', 'avatar_url', "VARCHAR(255) DEFAULT NULL");
+    addColumnIfNotExists($pdo, 'archery_users', 'remember_token', "VARCHAR(255) DEFAULT NULL");
+    addColumnIfNotExists($pdo, 'archery_users', 'remember_expires_at', "DATETIME DEFAULT NULL");
+    addColumnIfNotExists($pdo, 'archery_clubs', 'session_remember_days', "INT DEFAULT 7");
+    addColumnIfNotExists($pdo, 'archery_cms_programs', 'pricing_tiers_json', "TEXT DEFAULT NULL");
+    addColumnIfNotExists($pdo, 'archery_cms_registrations', 'sessions_per_week', "INT DEFAULT 1");
+    addColumnIfNotExists($pdo, 'archery_cms_registrations', 'monthly_fee', "DECIMAL(12,2) DEFAULT 0.00");
+    addColumnIfNotExists($pdo, 'archery_cms_registrations', 'assigned_user_id', "INT DEFAULT NULL");
+    addColumnIfNotExists($pdo, 'archery_cms_registrations', 'assigned_archer_id', "INT DEFAULT NULL");
+    addColumnIfNotExists($pdo, 'archery_cms_registrations', 'acc_notes', "TEXT DEFAULT NULL");
+
     // 4. Tabel archery_distances
     $pdo->exec("
     CREATE TABLE IF NOT EXISTS `archery_distances` (

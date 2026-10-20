@@ -241,42 +241,151 @@
 - Pastikan seluruh halaman web publik dan portal klien siap dipresentasikan dan dijual ke calon klien klub panahan di seluruh Indonesia dengan rasa percaya diri tinggi.
 
 ### 38. 🎯 Sinkronisasi Anti-Terpotong Anchor Header & Layout Presisi di Web Utama SaaS (`saas_marketing.php`) Tanpa Mengubah Isi Konten
-- **Masalah dari Screenshot Pengguna (`archery.codika.my.id/index.php#fitur`)**:
-  - Saat pengunjung mengeklik menu navigasi header pada web utama (`Fitur Software`, `Klub Mitra`, `Paket Harga`, `Tanya Jawab`), posisi mendaratnya elemen meluncur ke puncak layar (`y = 0`), sehingga badge `KEUNGGULAN TEKNOLOGI` dan judul section terpotong/tertutup di bawah sticky navbar (`.saas-header`).
-  - Web tenant (`annahl.codika.my.id`) sudah berhasil diperbaiki dan tampil sempurna dengan `scroll-margin-top: 85px` serta `scroll-behavior: smooth`.
-- **Rencana Perbaikan Presisi (Zero Content Modification)**:
-  1. **CSS Anchor Navigation Fix**:
-     - Tambahkan aturan pada stylesheet `saas_marketing.php`:
-       ```css
-       html {
-           scroll-behavior: smooth;
-       }
-       section[id] {
-           scroll-margin-top: 85px;
-       }
-       .section-container {
-           max-width: 1560px;
-           margin-left: auto;
-           margin-right: auto;
-           width: 100%;
-       }
-       ```
-  2. **Harmonisasi Container Section (Full-Width Edge-to-Edge)**:
-     - Ganti pembungkus sempit `<div class="container py-4">` pada section `#fitur`, `#showcase`, `#harga`, `#faq`, dan `<footer>` menjadi `<div class="container-fluid px-3 px-lg-5 section-container py-4">`.
-     - Layout di layar laptop menjadi lapang, nyaman, merata ke samping seperti web tenant.
-  3. **Zero Content Modification Guarantee**:
-     - 100% seluruh teks, judul, deskripsi fitur, daftar tenant klub, simulasi demo, tabel harga, FAQ, dan tombol kontak WhatsApp dipertahankan utuh tanpa perubahan isi sedikitpun.
-  4. **Lint, Deploy & Remote Verification**:
-     - Jalankan `php -l saas_marketing.php`.
-     - Deploy ke laptopserver `100.119.52.45` via `deploy_target_archery.py`.
-     - Verifikasi live `curl.exe -s "https://archery.codika.my.id/index.php" | findstr "scroll-margin-top"`.
-     - Commit dan push ke GitHub repository `main`.
+- Telah selesai 100% dan aktif live di server.
+
+### 39. 🔐 Isolasi Ketat Login Antar-Tenant (Blokir 100% Login di Klub/Sekolah Lain)
+- **Penyebab Masalah Pengguna**:
+  - Pengguna mencoba login dengan akun An-Nahl di subdomain Focus (`focus.codika.my.id/login.php`), dan masih bisa login.
+  - Hal ini terjadi karena:
+    1. Di `login.php`, logika boundary sebelumnya melewatkan pengecekan jika host teridentifikasi platform root atau jika session cookie antar-subdomain (`*.codika.my.id`) membagikan session PHP yang sudah aktif.
+    2. Pada halaman terproteksi (`app_dashboard.php`, `coach_dashboard.php`, `settings.php`), tidak ada middleware yang memvalidasi kecocokan `$_SESSION['club_id']` dengan tenant dari domain yang sedang dibuka.
+- **Rencana Perbaikan Presisi**:
+  1. Pada `login.php`:
+     - Validasi mutlak: Jika user yang berhasil terotentikasi memiliki `role !== 'master_admin'` dan `club_id !== $currentTenant['id']`, login DITOLAK SEKETIKA dengan notifikasi error jelas: *"Akun Anda terdaftar di [Nama Klub Asli]. Anda tidak memiliki izin login di portal [Nama Klub Saat Ini]. Silakan gunakan portal resmi klub Anda."*
+     - Hapus fallback session `club_id` lama yang berpotensi membingungkan tenant resolver saat berganti subdomain.
+  2. Pada middleware `Auth::requireAuth()` & `views/navbar.php`:
+     - Setiap kali pengguna mengakses halaman aplikasi, sistem membandingkan `(int)$_SESSION['club_id']` dengan tenant domain aktif. Jika tidak cocok (dan bukan `master_admin`), sesi langsung dibatalkan (force logout) dan dialihkan ke domain klub aslinya.
+
+### 40. 🚪 Pintu Gerbang Rahasia Khusus Master Admin (`master_gate_auth.php`) & Eliminasi Tombol "Masuk Akun" di Web Utama
+- **Permintaan Pengguna**:
+  - Tombol "Masuk Akun" di navbar web utama (`saas_marketing.php`) dihilangkan total.
+  - Dibuatkan pintu gerbang login khusus yang agak rumit/terproteksi khusus untuk Master Admin Platform.
+  - Akun An-Nahl (atau tenant biasa lainnya) DILARANG KERAS bisa login di pintu Master Admin ini.
+  - Di dalam Master Admin, HANYA berfokus pada:
+    1. Pembuatan & pengelolaan tenant klub (`master_tenants.php`).
+    2. Pengaturan CMS pemasaran SaaS (`master_cms.php`).
+    3. Pembayaran & invoice sewa SaaS (`master_billing.php`).
+    4. Log aktivitas seluruh tenant dengan filter (`master_activity_logs.php`).
+    5. Manajemen sesi pengguna aktif, deteksi IP address, dan fitur **Putus Sesi (Kill Session / Revoke)** (`master_user_sessions.php`).
+- **Rencana Perbaikan Presisi**:
+  1. Hapus tombol *"Masuk Akun"* di header navigasi `saas_marketing.php`.
+  2. Buat pintu gerbang login rahasia: `master_gate_auth.php` (dengan URL aman berparameter / secret token check atau standalone secret route).
+  3. Di `master_gate_auth.php`:
+     - Hanya menerima akun dengan `role === 'master_admin'`.
+     - Jika ada akun An-Nahl (`superadmin`, `coach`, `parent`, `archer`) mencoba login di sini, sistem menolak 100%: *"Akses Ditolak: Halaman ini khusus Master Admin Platform Codika."*
+
+### 41. 📜 Sistem Log Aktivitas Audit Trail Terpadu & Pemutus Sesi Pengguna (Kill Session / Revoke)
+- **Tabel Database Baru**:
+  1. `archery_activity_logs`:
+     - `id`, `club_id`, `user_id`, `action_type` (LOGIN, LOGOUT, SCORING_INPUT, CMS_UPDATE, RBAC_UPDATE, DISTANCE_ACC, dll), `action_description`, `ip_address`, `user_agent`, `created_at`.
+  2. `archery_user_sessions`:
+     - `id`, `session_id`, `user_id`, `club_id`, `ip_address`, `user_agent`, `login_at`, `last_activity_at`, `is_revoked`.
+- **Fitur di Master Admin (`master_activity_logs.php` & `master_user_sessions.php`)**:
+  - Menampilkan audit trail log aktivitas seluruh tenant dengan filter: filter per Tenant Klub, filter per Role, filter per Tanggal, dan pencarian kata kunci.
+  - Menampilkan daftar pengguna yang sedang aktif online beserta IP Address, lokasi/browser, dan tombol **"Putus Sesi (Kill Session)"**.
+  - Jika sesi diputus oleh Master Admin, `is_revoked = 1`. Saat pengguna me-refresh halaman, `Auth::check()` mendeteksi sesi dicabut dan langsung me-logout paksa pengguna tersebut.
+- **Fitur di Super Admin Setiap Tenant (`tenant_activity_logs.php`)**:
+  - Menu baru di navbar Super Admin: *"⚙️ Manajemen" -> "📜 Log Aktivitas Klub"*.
+  - Menampilkan log aktivitas yang terjadi di klubnya sendiri (`WHERE club_id = :cid`), meliputi: siapa yang login, siapa pelatih yang menginput skor atlet, siapa yang mengubah jadwal/CMS, dan status kenaikan jarak atlet beserta IP address.
+
+### 42. ⚡ Optimasi Kecepatan Seluruh Web Tenant Platform (An-Nahl, Focus Archery, & Seluruh Klien Tenant Mendatang) — Zero Infinite Loading
+- **Instruksi Pengguna**:
+  - Optimasi dilakukan menyeluruh untuk SEMUA website tenant (`annahl.codika.my.id`, `focus.codika.my.id`, dan semua subdomain klien baru), bukan hanya satu klub saja.
+- **Akar Masalah dari Investigasi**:
+  1. Direktori aset gambar `assets/img/` dan `uploads/` belum ada di filesystem lokal maupun laptopserver.
+  2. Data galeri & media di database (`assets/img/gallery_range.jpg`, dll.) gagal dimuat (404), yang memicu penanganan `onerror` memanggil URL eksternal gambar resolusi tinggi dari Unsplash (`https://images.unsplash.com/...`).
+  3. CDN Unsplash seringkali mengalami throttling/kecepatan lambat dari provider internet di Indonesia, sehingga browser terus-menerus menahan status *loading spinner* tanpa henti di seluruh tenant.
+- **Rencana Perbaikan Presisi Menyeluruh**:
+  1. Buat folder `assets/img/` dan `uploads/` (beserta subfolder `logos`, `favicons`, `galleries`, `avatars`) secara permanen dengan perizinan penuh (0777).
+  2. Sediakan aset gambar lokal ringan (*featherweight responsive assets*) berformat WebP/SVG atau CSS visual cards untuk SEMUA tenant (An-Nahl, Focus, dan fallback tenant baru) sehingga tidak ada lagi permintaan jaringan yang menggantung.
+  3. Tambahkan atribut `loading="lazy"` dan `decoding="async"` pada seluruh elemen `<img>` di `index.php` (yang merupakan core engine landing page seluruh tenant).
+  4. Hapus total seluruh URL eksternal Unsplash di `index.php`, `setup_db.php`, dan `saas_marketing.php`. Ganti dengan fallback lokal instan yang termuat dalam hitungan milidetik.
+  5. Menjamin waktu buka halaman web seluruh tenant super cepat (< 300ms total load time) tanpa ada aset eksternal yang menghambat rendering browser.
+
+### 43. 🖼️ Perbaikan Menyeluruh Bug Upload Gambar (Logo, Navicon / Favicon, & Galeri)
+- **Akar Masalah dari Investigasi**:
+  1. Pada form `settings.php` dan `master_cms.php`, tag `<form method="POST">` **tidak memiliki atribut `enctype="multipart/form-data"`**.
+  2. Akibatnya browser mengirim data form sebagai string teks biasa, sehingga variabel PHP `$_FILES['club_logo']` dan `$_FILES['club_favicon']` selalu kosong (tidak pernah terkirim ke server).
+  3. Pada `cms_admin.php`, input galeri sebelumnya hanya berupa link teks URL dan belum mendukung unggah file gambar langsung dari komputer/HP.
+- **Rencana Perbaikan Presisi**:
+  1. Pasang atribut `enctype="multipart/form-data"` pada seluruh formulir upload di `settings.php`, `master_cms.php`, dan `cms_admin.php`.
+  2. Tambahkan fitur upload file gambar langsung di form Galeri `cms_admin.php` (bisa upload foto dari HP/laptop, tersimpan aman di `uploads/galleries/`).
+  3. Pastikan verifikasi format MIME type (PNG, JPG, WEBP, ICO, SVG), limit ukuran file (max 5MB), dan penamaan acak ber-UUID/timestamp aman diterapkan.
+
+### 44. 👤 Profil Pengguna Lengkap di Kanan Header (`profile.php` - Ganti Foto, Data Diri, & Password)
+- **Desain & Navigasi**:
+  - Di sisi kanan header `views/navbar.php`, tambahkan Avatar bulat pengguna dengan lencana role yang elegan.
+  - Klik avatar membuka dropdown profil cepat atau tautan ke halaman profil mandiri: [`profile.php`](file:///c:/laragon/www/target_archery/profile.php).
+- **Fitur di Halaman `profile.php` (Dapat Diakses Seluruh Role: Master Admin, Super Admin, Coach, Parent, Archer)**:
+  1. **Tab 1: Data Diri**:
+     - Form ubah Nama Lengkap, Nomor HP / WhatsApp, dan Alamat Email.
+  2. **Tab 2: Foto Profil (Avatar)**:
+     - Form unggah foto profil (didukung pratinjau langsung / instant preview).
+     - File tersimpan di `uploads/avatars/` dan otomatis mengupdate kolom `avatar_url` di `archery_users`.
+  3. **Tab 3: Keamanan & Ganti Password**:
+     - Form ganti kata sandi: Password Saat Ini, Password Baru (minimal 6 karakter), dan Konfirmasi Password Baru.
+     - Verifikasi `password_verify` sebelum mengupdate hash baru via `password_hash(..., PASSWORD_BCRYPT)`.
+
+### 45. 📱 Header Responsif Dinamis Mode Tablet & Mobile (Auto-Scale Logo & Tulisan, Mobile Minimalis: Logo + Data Diri)
+- **Masalah dari Screenshot Pengguna (1112px Mode Tab)**:
+  - Di ukuran tablet (sekitar 768px - 1199px), header terlihat penuh sesak, ukuran logo dan font teks masih terlalu besar, dan jarak antar menu membuat tombol/isi terdesak.
+- **Rencana Perbaikan Presisi**:
+  1. **Mode Tablet (Fluid Auto-Scaling via Media Query 768px - 1199px)**:
+     - Gunakan ukuran fluid `font-size: clamp(0.85rem, 1.4vw, 1.15rem);` untuk nama klub/brand.
+     - Logo mengecil proporsional dari 42px menjadi 32px–36px.
+     - Margin dan gap navigasi dipadatkan (`gap: clamp(0.5rem, 1vw, 1.25rem);`).
+     - Seluruh elemen header muat sempurna dalam satu baris datar tanpa bertumpuk atau terpotong.
+  2. **Mode HP / Mobile Screen (<= 767px)**:
+     - Header disederhanakan secara elegan: Sisi kiri **HANYA menampilkan Logo + Nama Klub Ramping**, dan sisi kanan **HANYA menampilkan Foto Profil / Data Diri Pengguna (atau tombol Masuk)**.
+     - Menu navigasi dipindahkan ke bottom nav bar atau dropdown offcanvas yang rapi, menjaga layar HP bersih dan nyaman.
+  3. Terapkan pada `views/navbar.php` (aplikasi), `index.php` (web tenant), dan `saas_marketing.php` (web platform).
+
+### 46. 🏹 Pilihan Paket & Frekuensi Latihan Otomatis (1x, 2x, 3x Sepekan) pada Pendaftaran Atlet
+- **Fitur Baru**:
+  - Pada formulir pendaftaran atlet ([`register_archer.php`](file:///c:/laragon/www/target_archery/register_archer.php)):
+    - Calon atlet / orang tua dapat memilih program latihan sekaligus opsi frekuensi kedatangan (misal: *1x sepekan / 4 sesi per bulan*, *2x sepekan / 8 sesi per bulan*, atau *3x sepekan / 12 sesi per bulan*).
+    - Biaya SPP/iuran bulanan dan rincian benefit (busur dipinjamkan, target face, pendampingan coach) otomatis dihitung dan ditampilkan secara transparan secara real-time via JavaScript interaktif sebelum submit.
+  - Pada panel Super Admin ([`cms_admin.php`](file:///c:/laragon/www/target_archery/cms_admin.php)):
+    - Super Admin dapat mengatur kelipatan biaya dan variasi frekuensi mingguan pada masing-masing program kursus.
+
+### 47. ⏳ Alur Pendaftaran Menunggu ACC Super Admin & Pembuatan Akun Otomatis (Username + Password + PIN)
+- **Alur Pendaftaran Publik**:
+  - Saat calon atlet mengisi formulir di `register_archer.php`, status pendaftaran tersimpan sebagai `pending` (Menunggu Verifikasi & ACC).
+  - Tampilkan halaman konfirmasi sukses: *"Pendaftaran Anda berhasil dicatat. Status: Menunggu Verifikasi & ACC dari Super Admin [Nama Klub]. Notifikasi akun login akan diinformasikan."*
+- **Panel Pengelolaan Pendaftaran Super Admin**:
+  - Pada [`cms_admin.php`](file:///c:/laragon/www/target_archery/cms_admin.php) / [`admin_approvals.php`](file:///c:/laragon/www/target_archery/admin_approvals.php):
+    - Super Admin melihat daftar santri/atlet yang mendaftar.
+    - Super Admin dapat mengklik tombol **"ACC & Terbitkan Akun"**.
+    - Muncul modal konfirmasi di mana Super Admin bisa melihat atau mengkustomisasi **Username**, **Password Awal**, serta **PIN Lapangan 6-Digit**.
+    - Saat tombol "Konfirmasi ACC" ditekan:
+      1. Sistem otomatis membuat akun orang tua / user di `archery_users` (role `parent`) dengan username dan password yang telah ditentukan.
+      2. Sistem otomatis membuat data atlet resmi di `archery_archers` (nomor induk atlet NIS, PIN perangkat lapangan, jarak awal 5m).
+      3. Status pendaftaran diubah menjadi `verified`.
+      4. Sistem menghasilkan rincian akun dan tautan template WhatsApp otomatis: *"Selamat! Pendaftaran [Nama Santri] di [Nama Klub] telah disetujui. Username: [user], Password: [pass], PIN Lapangan: [pin], Portal Login: [url]"*.
+  - **Form Tambah Atlet Langsung dari Super Admin**:
+    - Super Admin juga dapat mendaftarkan atlet baru secara manual dari panel admin dengan langsung menentukan username dan password tanpa melalui alur publik.
+
+### 48. 🔐 Fitur "Ingat Saya" (Remember Me) di Login & Pengaturan Durasi Cache Sesi oleh Super Admin
+- **Fitur pada `login.php`**:
+  - Tambahkan checkbox modern: `[x] Ingat Saya di Perangkat Ini (Remember Me)`.
+  - Jika dicentang saat login, cookie sesi dibuat *persistent* dan aman (`HttpOnly`, `SameSite=Lax`).
+- **Pengaturan oleh Super Admin pada `settings.php`**:
+  - Tambahkan kolom baru di `archery_clubs`: `session_remember_days INT DEFAULT 7`.
+  - Super Admin klub dapat memilih durasi simpan sesi:
+    - *1 Hari* (Keamanan Tinggi / Komputer Bersama)
+    - *3 Hari*
+    - *7 Hari (Standar)*
+    - *14 Hari*
+    - *30 Hari (Perangkat Pribadi)*
+  - Sistem mengadopsi durasi tersebut untuk menghitung waktu kadaluarsa cookie login pengguna di klub tersebut.
 
 ---
 
 ## 🏆 STATUS EKSEKUSI & DEPLOYMENT
-- **Poin 1 s/d 37**: 100% Selesai, Teruji, dan Aktif di Server.
-- **Poin 38**: Sedang diajukan ke Pengguna untuk Persetujuan Plan Kumulatif (Tahap 1).
+- **Poin 1 s/d 38**: 100% Selesai, Teruji, dan Aktif di Server.
+- **Poin 39 s/d 48**: Sedang diajukan ke Pengguna untuk Persetujuan Plan Kumulatif (Tahap 1).
+
+
 
 
 

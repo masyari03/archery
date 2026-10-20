@@ -36,7 +36,7 @@ $canonicalUrl = TenantResolver::canonicalUrl('', $currentTenant);
 $seoTitle = !empty($cms['meta_title']) ? $cms['meta_title'] : "{$currentTenant['club_name']} - Klub Panahan & Les Memanah Terbaik di {$currentTenant['city']} | Standar World Archery";
 $seoDesc = !empty($cms['meta_description']) ? $cms['meta_description'] : $heroSubheadline;
 $seoKeywords = !empty($cms['meta_keywords']) ? $cms['meta_keywords'] : "les panahan anak {$currentTenant['city']}, klub panahan sunnah, kursus memanah pemula, archery club {$currentTenant['city']}";
-$ogImage = !empty($cms['og_image_url']) ? $cms['og_image_url'] : 'https://images.unsplash.com/photo-1511295742362-92c96b124e52?auto=format&fit=crop&w=1200&q=80';
+$ogImage = !empty($cms['og_image_url']) ? $cms['og_image_url'] : (!empty($currentTenant['logo_url']) ? $currentTenant['logo_url'] : 'assets/img/gallery_range.jpg');
 
 // Ambil Program Kursus Klub
 $stmtProg = $pdo->prepare("SELECT * FROM archery_cms_programs WHERE club_id = :cid AND is_active = 1 ORDER BY order_num ASC");
@@ -275,48 +275,48 @@ foreach ($schedules as $sch) {
         </div>
     </div>
 
-    <!-- MAIN NAVBAR WEB CMS (FULL WIDTH LAPTOP COMFORT) -->
+    <!-- MAIN NAVBAR WEB CMS (FLUID RESPONSIVE LAPTOP & TABLET) -->
     <header class="nav-cms-header py-2">
         <div class="container-fluid px-3 px-lg-5 section-container d-flex justify-content-between align-items-center">
-            <a href="index.php" class="d-flex align-items-center gap-2 text-decoration-none">
-                <?php if (!empty($currentTenant['logo_url']) && $currentTenant['logo_url'] !== 'assets/img/default_logo.png'): ?>
-                    <img src="<?= htmlspecialchars($currentTenant['logo_url']) ?>" alt="Logo" style="height: 42px; max-width: 50px; object-fit: contain; border-radius: 8px;">
+            <a href="index.php" class="d-flex align-items-center gap-2 text-decoration-none min-w-0">
+                <?php if (!empty($currentTenant['logo_url']) && $currentTenant['logo_url'] !== 'assets/img/default_logo.png' && file_exists(__DIR__ . '/' . $currentTenant['logo_url'])): ?>
+                    <img src="<?= htmlspecialchars($currentTenant['logo_url']) ?>" alt="Logo" style="height: clamp(30px, 4vw, 42px); max-width: clamp(38px, 5vw, 50px); object-fit: contain; border-radius: 8px;" loading="lazy" decoding="async">
                 <?php else: ?>
-                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style="width: 42px; height: 42px; background: var(--primary); font-size: 20px;">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style="width: clamp(32px, 4vw, 42px); height: clamp(32px, 4vw, 42px); background: var(--primary); font-size: clamp(14px, 2vw, 20px);">
                         🎯
                     </div>
                 <?php endif; ?>
-                <div>
-                    <h5 class="mb-0 fw-bold brand-font" style="letter-spacing: -0.02em;"><?= htmlspecialchars($currentTenant['club_name']) ?></h5>
-                    <span class="text-muted small" style="font-size: 11px;">Official Archery Club &bull; Member Platform</span>
+                <div class="min-w-0">
+                    <h5 class="mb-0 fw-bold brand-font text-truncate" style="letter-spacing: -0.02em; font-size: clamp(0.85rem, 1.3vw, 1.15rem);"><?= htmlspecialchars($currentTenant['club_name']) ?></h5>
+                    <span class="text-muted small d-none d-sm-inline" style="font-size: clamp(10px, 0.8vw, 11px);">Official Archery Club &bull; Member Platform</span>
                 </div>
             </a>
 
-            <!-- Menu Publik -->
-            <nav class="d-none d-lg-flex align-items-center gap-4">
-                <a href="#tentang" class="nav-item small fw-medium">Tentang Klub</a>
-                <a href="#filosofi" class="nav-item small fw-medium">Filosofi Sunnah</a>
-                <a href="#program" class="nav-item small fw-medium">Program Kursus</a>
-                <a href="#jadwal" class="nav-item small fw-medium">Jadwal Lapangan</a>
-                <a href="#pelatih" class="nav-item small fw-medium">Tim Pelatih</a>
-                <a href="#galeri" class="nav-item small fw-medium">Galeri &amp; Fasilitas</a>
+            <!-- Menu Publik (Hidden on tablet/mobile <= 991px) -->
+            <nav class="d-none d-lg-flex align-items-center gap-3 gap-xl-4">
+                <a href="#tentang" class="nav-item small fw-medium text-nowrap">Tentang Klub</a>
+                <a href="#filosofi" class="nav-item small fw-medium text-nowrap">Filosofi Sunnah</a>
+                <a href="#program" class="nav-item small fw-medium text-nowrap">Program Kursus</a>
+                <a href="#jadwal" class="nav-item small fw-medium text-nowrap">Jadwal Lapangan</a>
+                <a href="#pelatih" class="nav-item small fw-medium text-nowrap">Tim Pelatih</a>
+                <a href="#galeri" class="nav-item small fw-medium text-nowrap">Galeri &amp; Fasilitas</a>
             </nav>
 
             <!-- Tombol Aksi: Masuk Portal / Daftar -->
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
                 <!-- TOMBOL TOGGLE TEMA ☀️ / 🌙 -->
                 <button type="button" class="theme-toggle-btn me-1" onclick="toggleAppTheme()" title="Ganti Tema Terang/Gelap" id="themeToggleBtn">
                     🌙
                 </button>
-                <a href="register_archer.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="btn btn-warning btn-sm fw-bold text-dark px-3 shadow-sm">
-                    <i class="bi bi-pencil-square"></i> Daftar Atlet Baru
+                <a href="register_archer.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="btn btn-warning btn-sm fw-bold text-dark px-2 px-sm-3 shadow-sm text-nowrap" style="font-size: clamp(0.72rem, 1vw, 0.85rem);">
+                    <i class="bi bi-pencil-square"></i> <span class="d-none d-md-inline">Daftar Atlet Baru</span><span class="d-inline d-md-none">Daftar</span>
                 </a>
                 <?php if ($isLoggedIn): ?>
-                    <a href="app_dashboard.php" class="btn btn-outline-info btn-sm px-3 fw-bold">
-                        <i class="bi bi-bullseye"></i> Portal Scoring
+                    <a href="app_dashboard.php" class="btn btn-outline-info btn-sm px-2 px-sm-3 fw-bold text-nowrap" style="font-size: clamp(0.72rem, 1vw, 0.85rem);">
+                        <i class="bi bi-bullseye"></i> <span class="d-none d-md-inline">Portal Scoring</span><span class="d-inline d-md-none">Portal</span>
                     </a>
                 <?php else: ?>
-                    <a href="login.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="btn btn-outline-light btn-sm px-3">
+                    <a href="login.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="btn btn-outline-light btn-sm px-2 px-sm-3 text-nowrap" style="font-size: clamp(0.72rem, 1vw, 0.85rem);">
                         <i class="bi bi-box-arrow-in-right"></i> Masuk
                     </a>
                 <?php endif; ?>
@@ -651,7 +651,7 @@ foreach ($schedules as $sch) {
                     <?php foreach ($galleries as $g): ?>
                         <div class="col-6 col-md-3">
                             <div class="gallery-card">
-                                <img src="<?= htmlspecialchars($g['image_url']) ?>" alt="<?= htmlspecialchars($g['title']) ?>" onerror="this.src='https://images.unsplash.com/photo-1511295742362-92c96b124e52?auto=format&fit=crop&w=600&q=80';">
+                                <img src="<?= htmlspecialchars($g['image_url']) ?>" alt="<?= htmlspecialchars($g['title']) ?>" loading="lazy" decoding="async" onerror="this.src='assets/img/gallery_range.jpg';">
                                 <div class="gallery-overlay">
                                     <div class="text-white small fw-bold">
                                         <span class="badge bg-warning text-dark mb-1" style="font-size: 10px;"><?= strtoupper($g['category']) ?></span>

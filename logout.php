@@ -11,6 +11,7 @@ if (ini_get("session.use_cookies")) {
         $params["secure"], $params["httponly"]
     );
 }
+setcookie('archery_remember', '', time() - 3600, '/');
 session_destroy();
 header('Location: login.php');
 exit;

@@ -1,5 +1,5 @@
 <?php
-// views/navbar.php - Top App Bar Ramping & Nyaman (54px) + Modern Dropdowns + RBAC Strict Filtering
+// views/navbar.php - Top App Bar Ramping & Nyaman (54px) + Modern Dropdowns + RBAC Strict Filtering + User Avatar Profile
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/rbac.php';
 
@@ -47,6 +47,25 @@ $clubMeta = $stmtClub->fetch();
 $primaryColor = $clubMeta['primary_color'] ?? '#0284c7';
 $clubDisplayName = $clubMeta['club_name'] ?? 'Target Archery';
 
+// Avatar pengguna
+$userAvatar = 'assets/img/default_avatar.png';
+if ($currentUser) {
+    if (!empty($currentUser['avatar_url']) && file_exists(__DIR__ . '/../' . $currentUser['avatar_url'])) {
+        $userAvatar = $currentUser['avatar_url'];
+    } elseif (!empty($_SESSION['avatar_url']) && file_exists(__DIR__ . '/../' . $_SESSION['avatar_url'])) {
+        $userAvatar = $_SESSION['avatar_url'];
+    } else {
+        // Cek DB jika session belum terisi
+        $stmtAv = $pdo->prepare("SELECT avatar_url FROM archery_users WHERE id = :uid LIMIT 1");
+        $stmtAv->execute([':uid' => $currentUser['id']]);
+        $rowAv = $stmtAv->fetch();
+        if (!empty($rowAv['avatar_url']) && file_exists(__DIR__ . '/../' . $rowAv['avatar_url'])) {
+            $userAvatar = $rowAv['avatar_url'];
+            $_SESSION['avatar_url'] = $userAvatar;
+        }
+    }
+}
+
 // Evaluasi Hak Akses RBAC untuk Menentukan Menu Aktif / Hilang Total
 $canScoring   = Auth::check() && RBAC::can('scoring');
 $canWebProfil = RBAC::can('web_profil');
@@ -84,9 +103,9 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
         .desktop-nav-links { display: none !important; }
     }
 
-    /* MODERN HEADER STYLING */
+    /* FLUID RESPONSIVE HEADER ENGINE */
     .app-header {
-        height: 56px;
+        height: clamp(52px, 5vw, 60px);
         background: var(--bg-card);
         border-bottom: 1px solid var(--border-color);
         position: sticky;
@@ -96,7 +115,7 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
         -webkit-backdrop-filter: blur(16px);
         display: flex;
         align-items: center;
-        padding: 0 1.25rem;
+        padding: 0 clamp(0.5rem, 1.8vw, 1.25rem);
     }
     .header-inner {
         max-width: 1400px;
@@ -105,40 +124,67 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 1rem;
+        gap: clamp(0.4rem, 1vw, 1rem);
     }
     .nav-brand-wrap {
         display: flex;
         align-items: center;
-        gap: 0.65rem;
+        gap: clamp(0.35rem, 0.8vw, 0.65rem);
         text-decoration: none;
         color: var(--text-main);
+        min-width: 0;
     }
     .nav-brand-wrap:hover {
         color: var(--primary);
     }
     .brand-target-icon {
-        width: 32px;
-        height: 32px;
+        width: clamp(28px, 3.2vw, 34px);
+        height: clamp(28px, 3.2vw, 34px);
         border-radius: 50%;
         background: conic-gradient(from 0deg, var(--ring-gold), var(--ring-red), var(--ring-blue), var(--ring-gold));
         display: flex;
         align-items: center;
         justify-content: center;
         box-shadow: 0 0 12px rgba(2, 132, 199, 0.45);
-        font-size: 15px;
+        font-size: clamp(12px, 1.5vw, 15px);
+        flex-shrink: 0;
+    }
+    .nav-brand-logo-img {
+        height: clamp(28px, 3.2vw, 36px);
+        max-width: clamp(34px, 4vw, 44px);
+        object-fit: contain;
+        border-radius: 6px;
+        flex-shrink: 0;
+    }
+    .brand-title-text {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 800;
+        font-size: clamp(0.82rem, 1.1vw, 1.05rem);
+        letter-spacing: -0.01em;
+        line-height: 1.1;
+        white-space: nowrap;
+    }
+    .brand-subtitle-text {
+        font-size: clamp(0.62rem, 0.85vw, 0.72rem);
+        color: var(--text-muted);
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: clamp(90px, 15vw, 220px);
     }
     .nav-pill-link {
-        font-size: 0.86rem;
+        font-size: clamp(0.74rem, 0.85vw, 0.86rem);
         font-weight: 600;
         color: var(--text-muted);
-        padding: 0.4rem 0.75rem;
+        padding: clamp(0.25rem, 0.4vw, 0.4rem) clamp(0.4rem, 0.6vw, 0.75rem);
         border-radius: 8px;
         transition: all 0.2s ease;
         text-decoration: none;
         display: inline-flex;
         align-items: center;
-        gap: 0.35rem;
+        gap: 0.3rem;
+        white-space: nowrap;
     }
     .nav-pill-link:hover, .nav-pill-link.active {
         color: var(--primary);
@@ -156,13 +202,13 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
         box-shadow: var(--shadow-md) !important;
         padding: 0.5rem !important;
         backdrop-filter: blur(20px) !important;
-        min-width: 200px;
+        min-width: 210px;
     }
     .dropdown-item-modern {
-        font-size: 0.85rem !important;
+        font-size: 0.84rem !important;
         font-weight: 600 !important;
         color: var(--text-main) !important;
-        padding: 0.5rem 0.85rem !important;
+        padding: 0.45rem 0.8rem !important;
         border-radius: 6px !important;
         transition: all 0.15s ease !important;
         display: flex;
@@ -172,6 +218,50 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
     .dropdown-item-modern:hover, .dropdown-item-modern.active {
         background: var(--primary-light) !important;
         color: var(--primary) !important;
+    }
+    .user-profile-header-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        padding: 3px 8px 3px 4px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        gap: clamp(0.35rem, 0.8vw, 0.55rem);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: var(--text-main);
+    }
+    .user-profile-header-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--primary);
+    }
+    .header-user-avatar {
+        width: clamp(28px, 3.2vw, 34px);
+        height: clamp(28px, 3.2vw, 34px);
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--primary);
+        background: #1e293b;
+        flex-shrink: 0;
+    }
+    .theme-toggle-btn {
+        background: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        width: clamp(30px, 3.2vw, 34px);
+        height: clamp(30px, 3.2vw, 34px);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+    }
+    .theme-toggle-btn:hover {
+        border-color: var(--primary);
+        color: var(--primary);
     }
 </style>
 
@@ -189,23 +279,23 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
 </div>
 <?php endif; ?>
 
-<!-- 1. TOP APP BAR TERPADU (TINGGI 56PX, LAPANG & ELEGAN) -->
+<!-- 1. TOP APP BAR TERPADU (FLUID RESPONSIVE UNTUK TABLET & HP) -->
 <header class="app-header no-print">
     <div class="header-inner">
         
         <!-- SISI KIRI: BRAND & CHILD SWITCHER -->
-        <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2 gap-md-3 min-w-0">
             <a href="<?= Auth::check() ? 'app_dashboard.php' : 'index.php' ?>" class="nav-brand-wrap">
-                <?php if (!empty($clubMeta['logo_url']) && $clubMeta['logo_url'] !== 'assets/img/default_logo.png'): ?>
-                    <img src="<?= htmlspecialchars($clubMeta['logo_url']) ?>" alt="Logo" style="height: 34px; max-width: 44px; object-fit: contain; border-radius: 6px;">
+                <?php if (!empty($clubMeta['logo_url']) && $clubMeta['logo_url'] !== 'assets/img/default_logo.png' && file_exists(__DIR__ . '/../' . $clubMeta['logo_url'])): ?>
+                    <img src="<?= htmlspecialchars($clubMeta['logo_url']) ?>" alt="Logo" class="nav-brand-logo-img" loading="lazy" decoding="async">
                 <?php else: ?>
                     <div class="brand-target-icon">🎯</div>
                 <?php endif; ?>
-                <div>
-                    <div style="font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.05rem; letter-spacing: -0.01em; line-height: 1.1;">
+                <div class="min-w-0">
+                    <div class="brand-title-text">
                         TARGET ARCHERY
                     </div>
-                    <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">
+                    <div class="brand-subtitle-text">
                         <?= htmlspecialchars($clubDisplayName) ?>
                     </div>
                 </div>
@@ -213,7 +303,7 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
 
             <!-- Child Switcher jika Ortu punya > 1 Atlet -->
             <?php if (!empty($children) && count($children) > 1): ?>
-                <div class="child-switcher-box d-none d-sm-flex align-items-center">
+                <div class="child-switcher-box d-none d-lg-flex align-items-center">
                     <span style="font-size: 11px; color: var(--text-dim); margin-right: 4px;">ATLET:</span>
                     <select class="child-switcher-select" id="childSwitcherSelect" onchange="switchChildProfile(this.value)">
                         <?php foreach ($children as $c): ?>
@@ -224,7 +314,7 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
                     </select>
                 </div>
             <?php elseif ($currentArcher && !in_array($currentRole, ['super_admin', 'master_admin'])): ?>
-                <div class="child-switcher-box d-none d-md-flex align-items-center">
+                <div class="child-switcher-box d-none d-xl-flex align-items-center">
                     <span style="font-size: 11px; font-weight: 700; color: var(--primary);">
                         🎯 <?= htmlspecialchars($currentArcher['nickname'] ?? $currentArcher['full_name']) ?> (<?= (int)$currentArcher['current_distance_meter'] ?>m)
                     </span>
@@ -291,7 +381,7 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
                         <?php if ($canCmsAdmin): ?>
                             <li>
                                 <a class="dropdown-item dropdown-item-modern <?= $currentPage === 'cms_admin.php' ? 'active' : '' ?>" href="cms_admin.php">
-                                    <i class="bi bi-window-desktop text-info"></i> Web CMS Profil
+                                    <i class="bi bi-window-desktop text-info"></i> Web CMS Profil &amp; ACC
                                 </a>
                             </li>
                         <?php endif; ?>
@@ -337,7 +427,7 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
             <!-- 5. Dropdown SaaS Platform (Khusus Master Admin Platform) -->
             <?php if ($hasMasterMenu): ?>
                 <div class="dropdown">
-                    <button class="nav-pill-link nav-pill-dropdown dropdown-toggle <?= in_array($currentPage, ['master_tenants.php', 'master_billing.php', 'master_cms.php']) ? 'active' : '' ?>" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="color: #f59e0b; font-weight: 700;">
+                    <button class="nav-pill-link nav-pill-dropdown dropdown-toggle <?= in_array($currentPage, ['master_tenants.php', 'master_billing.php', 'master_cms.php', 'master_activity_logs.php', 'master_user_sessions.php']) ? 'active' : '' ?>" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="color: #f59e0b; font-weight: 700;">
                         <span>👑</span> <span>SaaS Master</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-modern">
@@ -356,6 +446,16 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
                                 <i class="bi bi-rocket-takeoff-fill text-info"></i> Marketing &amp; SEO SaaS
                             </a>
                         </li>
+                        <li>
+                            <a class="dropdown-item dropdown-item-modern <?= $currentPage === 'master_activity_logs.php' ? 'active' : '' ?>" href="master_activity_logs.php">
+                                <i class="bi bi-shield-check text-info"></i> Audit Log Seluruh Tenant
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item dropdown-item-modern <?= $currentPage === 'master_user_sessions.php' ? 'active' : '' ?>" href="master_user_sessions.php">
+                                <i class="bi bi-broadcast text-danger"></i> Pantau Sesi &amp; Putus IP
+                            </a>
+                        </li>
                     </ul>
                 </div>
             <?php endif; ?>
@@ -369,26 +469,66 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
 
         </nav>
 
-        <!-- SISI KANAN: USER PROFILE, THEME TOGGLE, & LOGOUT -->
+        <!-- SISI KANAN: USER PROFILE AVATAR, THEME TOGGLE, & LOGOUT -->
         <div class="d-flex align-items-center gap-2">
 
-            <!-- Switcher Tema Terang / Gelap (Dengan Sinkronisasi Ganda data-theme & data-bs-theme) -->
+            <!-- Switcher Tema Terang / Gelap -->
             <button type="button" class="theme-toggle-btn" onclick="toggleAppTheme()" title="Ganti Tema Terang/Gelap" id="themeToggleBtn">
                 🌙
             </button>
 
             <?php if (Auth::check()): ?>
-                <!-- Role Badge Pill -->
-                <span class="badge rounded-pill bg-primary bg-opacity-20 text-info border border-info border-opacity-25 px-2 py-1 d-none d-sm-inline-block" style="font-size: 0.75rem; letter-spacing: 0.04em;">
-                    <?= strtoupper(str_replace('_', ' ', $currentRole)) ?>
-                </span>
-
-                <!-- Tombol Logout -->
-                <a href="logout.php" class="nav-pill-link text-danger" title="Keluar dari Akun">
-                    <i class="bi bi-box-arrow-right fs-5"></i>
-                </a>
+                <!-- USER PROFILE AVATAR WITH DROPDOWN -->
+                <div class="dropdown">
+                    <button class="user-profile-header-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <img src="<?= htmlspecialchars($userAvatar) ?>" alt="Avatar" class="header-user-avatar" loading="lazy" decoding="async">
+                        <div class="d-none d-md-block text-start" style="line-height: 1.15;">
+                            <div class="text-truncate" style="max-width: 120px; font-weight: 700; font-size: 0.82rem; color: #fff;">
+                                <?= htmlspecialchars($currentUser['full_name'] ?: $currentUser['username']) ?>
+                            </div>
+                            <div style="font-size: 0.68rem; color: var(--text-dim); text-transform: uppercase; font-weight: 600;">
+                                <?= htmlspecialchars(str_replace('_', ' ', $currentRole)) ?>
+                            </div>
+                        </div>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-modern">
+                        <li class="px-3 py-2 border-bottom border-secondary border-opacity-25 mb-1">
+                            <div class="fw-bold text-white small"><?= htmlspecialchars($currentUser['full_name'] ?: $currentUser['username']) ?></div>
+                            <div class="text-muted" style="font-size: 0.72rem;">@<?= htmlspecialchars($currentUser['username']) ?> &bull; <?= strtoupper($currentRole) ?></div>
+                        </li>
+                        <li>
+                            <a class="dropdown-item dropdown-item-modern <?= $currentPage === 'profile.php' ? 'active' : '' ?>" href="profile.php">
+                                <i class="bi bi-person-gear text-primary"></i> Profil &amp; Ganti Sandi
+                            </a>
+                        </li>
+                        <?php if ($currentRole === 'super_admin'): ?>
+                            <li>
+                                <a class="dropdown-item dropdown-item-modern <?= $currentPage === 'tenant_activity_logs.php' ? 'active' : '' ?>" href="tenant_activity_logs.php">
+                                    <i class="bi bi-clock-history text-info"></i> Log Aktivitas Klub
+                                </a>
+                            </li>
+                        <?php elseif ($currentRole === 'master_admin'): ?>
+                            <li>
+                                <a class="dropdown-item dropdown-item-modern <?= $currentPage === 'master_activity_logs.php' ? 'active' : '' ?>" href="master_activity_logs.php">
+                                    <i class="bi bi-shield-check text-warning"></i> Audit Log Seluruh Tenant
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item dropdown-item-modern <?= $currentPage === 'master_user_sessions.php' ? 'active' : '' ?>" href="master_user_sessions.php">
+                                    <i class="bi bi-broadcast text-danger"></i> Pantau Sesi &amp; Putus IP
+                                </a>
+                            </li>
+                        <?php endif; ?>
+                        <li><hr class="dropdown-divider my-1 border-secondary border-opacity-25"></li>
+                        <li>
+                            <a class="dropdown-item dropdown-item-modern text-danger" href="logout.php">
+                                <i class="bi bi-box-arrow-right text-danger"></i> Keluar (Logout)
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             <?php else: ?>
-                <a href="login.php" class="btn btn-primary btn-sm fw-bold px-3 py-1">
+                <a href="login.php" class="btn btn-primary btn-sm fw-bold px-3 py-1" style="font-size: 0.82rem; border-radius: 8px;">
                     Masuk
                 </a>
             <?php endif; ?>
@@ -449,10 +589,17 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
         </a>
     <?php endif; ?>
 
-    <a href="logout.php" class="bottom-nav-item text-danger">
-        <span class="bottom-nav-icon">🚪</span>
-        <span>Keluar</span>
-    </a>
+    <?php if (Auth::check()): ?>
+        <a href="profile.php" class="bottom-nav-item <?= $currentPage === 'profile.php' ? 'active' : '' ?>">
+            <span class="bottom-nav-icon">👤</span>
+            <span>Profil</span>
+        </a>
+    <?php else: ?>
+        <a href="login.php" class="bottom-nav-item text-primary">
+            <span class="bottom-nav-icon">🔑</span>
+            <span>Masuk</span>
+        </a>
+    <?php endif; ?>
 </nav>
 
 <script>
@@ -474,7 +621,9 @@ function updateThemeIcons(theme) {
 
 document.addEventListener('DOMContentLoaded', () => {
     const current = document.documentElement.getAttribute('data-theme') || 'dark';
-    document.documentElement.setAttribute('data-bs-theme', current);
+    if (document.documentElement.hasAttribute('data-bs-theme')) {
+        document.documentElement.setAttribute('data-bs-theme', current);
+    }
     updateThemeIcons(current);
 });
 

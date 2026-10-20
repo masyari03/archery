@@ -57,7 +57,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
     <meta property="og:description" content="<?= htmlspecialchars($mkt['meta_description'] ?? 'Sistem digitalisasi klub panahan terlengkap di Indonesia.') ?>">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://archery.codika.my.id/">
-    <meta property="og:image" content="https://images.unsplash.com/photo-1511295742362-92c96b124e52?auto=format&fit=crop&w=1200&q=80">
+    <meta property="og:image" content="assets/img/default_logo.png">
 
     <!-- Structured Data Schema.org SoftwareApplication untuk Ranking Google Paling Atas -->
     <script type="application/ld+json">
@@ -196,9 +196,6 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
                 <button type="button" class="theme-toggle-btn me-1" onclick="toggleAppTheme()" title="Ganti Tema Terang/Gelap" id="themeToggleBtn">
                     🌙
                 </button>
-                <a href="login.php" class="btn btn-outline-info btn-sm px-3 fw-bold">
-                    <i class="bi bi-box-arrow-in-right"></i> Masuk Akun
-                </a>
                 <a href="https://wa.me/<?= $cleanMasterWa ?>?text=Halo%20Master%20Admin%20Target%20Archery,%20saya%20tertarik%20mendaftarkan%20klub%20panahan%20saya%20ke%20platform%20SaaS%20ini" target="_blank" class="btn btn-warning btn-sm fw-bold text-dark px-3 shadow-sm">
                     <i class="bi bi-whatsapp"></i> Hubungi Master Admin
                 </a>

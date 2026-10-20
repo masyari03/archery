@@ -150,13 +150,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $imgUrl = trim($_POST['image_url'] ?? '');
         $cat = in_array($_POST['category'] ?? '', ['fasilitas', 'latihan', 'turnamen', 'prestasi']) ? $_POST['category'] : 'latihan';
 
-        if ($title && $imgUrl) {
+        // File Upload Galeri jika diunggah
+        if (isset($_FILES['gallery_file']) && $_FILES['gallery_file']['error'] === UPLOAD_ERR_OK) {
+            $file = $_FILES['gallery_file'];
+            $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime = finfo_file($finfo, $file['tmp_name']);
+            finfo_close($finfo);
+
+            if (in_array($mime, $allowedMimes) && $file['size'] <= 5 * 1024 * 1024) {
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                $newFileName = 'gal_' . $clubId . '_' . time() . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
+                $uploadDir = __DIR__ . '/uploads/galleries/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                $destPath = $uploadDir . $newFileName;
+                if (move_uploaded_file($file['tmp_name'], $destPath)) {
+                    $imgUrl = 'uploads/galleries/' . $newFileName;
+                }
+            } else {
+                $alertMsg = 'File galeri harus format JPG/PNG/WEBP dan maksimal 5MB.';
+                $alertType = 'danger';
+            }
+        }
+
+        if (!$alertMsg && $title && $imgUrl) {
             $stmtAddG = $pdo->prepare("
                 INSERT INTO `archery_cms_galleries` (`club_id`, `title`, `image_url`, `category`, `order_num`)
                 VALUES (:cid, :title, :url, :cat, 1)
             ");
             $stmtAddG->execute([':cid' => $clubId, ':title' => $title, ':url' => $imgUrl, ':cat' => $cat]);
-            $alertMsg = 'Foto dokumentasi galeri berhasil ditambahkan!';
+            $alertMsg = '✔ Foto dokumentasi galeri berhasil ditambahkan!';
         }
     }
 
@@ -168,7 +193,223 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $alertMsg = 'Foto galeri berhasil dihapus.';
     }
 
-    // 8. Update Status Pendaftaran Atlet Masuk
+    // 8. ACC & Terbitkan Akun Atlet & Orang Tua
+    if ($action === 'acc_registration') {
+        $regId = (int)($_POST['registration_id'] ?? 0);
+        $username = strtolower(trim($_POST['username'] ?? ''));
+        $rawPassword = $_POST['password'] ?? '';
+        $pin = trim($_POST['pin'] ?? '1234');
+        $accNotes = trim($_POST['acc_notes'] ?? '');
+        $sessionsPerWeek = (int)($_POST['sessions_per_week'] ?? 2);
+        $monthlyFee = (float)($_POST['monthly_fee'] ?? 350000);
+
+        // Ambil data pendaftaran
+        $stmtReg = $pdo->prepare("SELECT * FROM archery_cms_registrations WHERE id = :rid AND club_id = :cid LIMIT 1");
+        $stmtReg->execute([':rid' => $regId, ':cid' => $clubId]);
+        $regData = $stmtReg->fetch();
+
+        if (!$regData) {
+            $alertMsg = 'Data pendaftaran tidak ditemukan.';
+            $alertType = 'danger';
+        } elseif (empty($username) || empty($rawPassword) || strlen($rawPassword) < 6) {
+            $alertMsg = 'Username dan password (min 6 karakter) wajib diisi untuk penerbitan akun.';
+            $alertType = 'danger';
+        } else {
+            try {
+                $pdo->beginTransaction();
+
+                // Cek apakah username sudah dipakai di sistem
+                $stmtCheckU = $pdo->prepare("SELECT id FROM archery_users WHERE username = :u LIMIT 1");
+                $stmtCheckU->execute([':u' => $username]);
+                if ($stmtCheckU->fetch()) {
+                    $username .= '_' . bin2hex(random_bytes(2));
+                }
+
+                // Cek apakah orang tua sudah punya akun di klub ini
+                $cleanPhone = preg_replace('/[^0-9]/', '', $regData['parent_phone']);
+                $stmtCheckParent = $pdo->prepare("SELECT id FROM archery_users WHERE club_id = :cid AND phone LIKE :ph AND role = 'parent' LIMIT 1");
+                $stmtCheckParent->execute([':cid' => $clubId, ':ph' => "%$cleanPhone%"]);
+                $existingParent = $stmtCheckParent->fetch();
+
+                if ($existingParent) {
+                    $userId = (int)$existingParent['id'];
+                } else {
+                    $passHash = password_hash($rawPassword, PASSWORD_BCRYPT);
+                    $stmtInsUser = $pdo->prepare("
+                        INSERT INTO archery_users (club_id, username, password_hash, role, full_name, phone, email, is_active)
+                        VALUES (:cid, :u, :p, 'parent', :fn, :ph, :em, 1)
+                    ");
+                    $stmtInsUser->execute([
+                        ':cid' => $clubId,
+                        ':u'   => $username,
+                        ':p'   => $passHash,
+                        ':fn'  => $regData['parent_name'],
+                        ':ph'  => $regData['parent_phone'],
+                        ':em'  => $regData['parent_email'] ?: null
+                    ]);
+                    $userId = (int)$pdo->lastInsertId();
+                }
+
+                // Buat data atlet di archery_archers
+                $stmtInsArcher = $pdo->prepare("
+                    INSERT INTO archery_archers (user_id, club_id, full_name, nickname, gender, birth_date, pin, current_distance_meter, sessions_per_week, monthly_fee, is_active)
+                    VALUES (:uid, :cid, :fn, :nick, :gender, :bdate, :pin, 5, :spw, :mfee, 1)
+                ");
+                $stmtInsArcher->execute([
+                    ':uid'    => $userId,
+                    ':cid'    => $clubId,
+                    ':fn'     => $regData['student_name'],
+                    ':nick'   => $regData['student_nickname'] ?: $regData['student_name'],
+                    ':gender' => $regData['gender'],
+                    ':bdate'  => $regData['birth_date'] ?: null,
+                    ':pin'    => $pin,
+                    ':spw'    => $sessionsPerWeek,
+                    ':mfee'   => $monthlyFee
+                ]);
+                $archerId = (int)$pdo->lastInsertId();
+
+                // Update status pendaftaran menjadi verified
+                $stmtUpReg = $pdo->prepare("
+                    UPDATE archery_cms_registrations
+                    SET status = 'verified',
+                        assigned_user_id = :uid,
+                        assigned_archer_id = :aid,
+                        acc_notes = :notes,
+                        sessions_per_week = :spw,
+                        monthly_fee = :mfee
+                    WHERE id = :rid AND club_id = :cid
+                ");
+                $stmtUpReg->execute([
+                    ':uid'   => $userId,
+                    ':aid'   => $archerId,
+                    ':notes' => $accNotes,
+                    ':spw'   => $sessionsPerWeek,
+                    ':mfee'  => $monthlyFee,
+                    ':rid'   => $regId,
+                    ':cid'   => $clubId
+                ]);
+
+                $pdo->commit();
+
+                ActivityLogger::log(
+                    (int)($_SESSION['user_id'] ?? 0),
+                    $clubId,
+                    'ACC_REGISTRATION',
+                    "Menerbitkan akun untuk atlet: {$regData['student_name']} (Username: @$username, PIN: $pin)"
+                );
+
+                $tenantSlug = $club['subdomain_slug'] ?? '';
+                $loginUrl = TenantResolver::canonicalUrl("login.php?club=$tenantSlug", $club);
+                $waSuccessTemplate = "🎯 *AKUN ANGGOTA PANAHAN TELAH TERBIT & DI-ACC*\n\n"
+                    . "Yth. Bapak/Ibu *{$regData['parent_name']}*,\n"
+                    . "Pendaftaran ananda *{$regData['student_name']}* di *{$club['club_name']}* telah resmi DISETUJUI & DITERBITKAN.\n\n"
+                    . "📋 *DATA LOGIN APLIKASI:*\n"
+                    . "• Link Login: {$loginUrl}\n"
+                    . "• Username: *{$username}*\n"
+                    . "• Kata Sandi: *{$rawPassword}*\n"
+                    . "• PIN Akses Atlet: *{$pin}*\n"
+                    . "• Paket Latihan: *{$sessionsPerWeek}x Sepekan* (" . ($sessionsPerWeek * 4) . " sesi/bln)\n"
+                    . "• Iuran SPP: Rp " . number_format($monthlyFee, 0, ',', '.') . "/bln\n\n"
+                    . "Silakan simpan data ini dan masuk ke portal untuk mencatat skor latihan ananda.\n"
+                    . "Terima kasih.";
+
+                $alertMsg = "✔ Pendaftaran berhasil di-ACC! Akun @{$username} & Atlet {$regData['student_name']} telah aktif.";
+                $showWaModal = [
+                    'phone' => preg_replace('/[^0-9]/', '', $regData['parent_phone']),
+                    'name' => $regData['parent_name'],
+                    'message' => $waSuccessTemplate
+                ];
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $alertMsg = 'Gagal memproses ACC pendaftaran: ' . $e->getMessage();
+                $alertType = 'danger';
+            }
+        }
+    }
+
+    // 8b. Tambah Atlet Baru Manual oleh Super Admin
+    if ($action === 'manual_register_athlete') {
+        $studentName = trim($_POST['student_name'] ?? '');
+        $nickname = trim($_POST['student_nickname'] ?? '');
+        $gender = in_array($_POST['gender'] ?? '', ['L', 'P']) ? $_POST['gender'] : 'L';
+        $birthDate = !empty($_POST['birth_date']) ? $_POST['birth_date'] : null;
+        $parentName = trim($_POST['parent_name'] ?? '');
+        $parentPhone = trim($_POST['parent_phone'] ?? '');
+        $parentEmail = trim($_POST['parent_email'] ?? '');
+        $username = strtolower(trim($_POST['username'] ?? ''));
+        $rawPassword = $_POST['password'] ?? '';
+        $pin = trim($_POST['pin'] ?? '1234');
+        $sessionsPerWeek = (int)($_POST['sessions_per_week'] ?? 2);
+        $monthlyFee = (float)($_POST['monthly_fee'] ?? 350000);
+
+        if (empty($studentName) || empty($parentName) || empty($parentPhone) || empty($username) || empty($rawPassword)) {
+            $alertMsg = 'Seluruh data bertanda bintang wajib diisi lengkap.';
+            $alertType = 'danger';
+        } else {
+            try {
+                $pdo->beginTransaction();
+
+                $stmtCheckU = $pdo->prepare("SELECT id FROM archery_users WHERE username = :u LIMIT 1");
+                $stmtCheckU->execute([':u' => $username]);
+                if ($stmtCheckU->fetch()) {
+                    $username .= '_' . bin2hex(random_bytes(2));
+                }
+
+                $passHash = password_hash($rawPassword, PASSWORD_BCRYPT);
+                $stmtInsUser = $pdo->prepare("
+                    INSERT INTO archery_users (club_id, username, password_hash, role, full_name, phone, email, is_active)
+                    VALUES (:cid, :u, :p, 'parent', :fn, :ph, :em, 1)
+                ");
+                $stmtInsUser->execute([
+                    ':cid' => $clubId,
+                    ':u'   => $username,
+                    ':p'   => $passHash,
+                    ':fn'  => $parentName,
+                    ':ph'  => $parentPhone,
+                    ':em'  => $parentEmail ?: null
+                ]);
+                $userId = (int)$pdo->lastInsertId();
+
+                $stmtInsArcher = $pdo->prepare("
+                    INSERT INTO archery_archers (user_id, club_id, full_name, nickname, gender, birth_date, pin, current_distance_meter, sessions_per_week, monthly_fee, is_active)
+                    VALUES (:uid, :cid, :fn, :nick, :gender, :bdate, :pin, 5, :spw, :mfee, 1)
+                ");
+                $stmtInsArcher->execute([
+                    ':uid'    => $userId,
+                    ':cid'    => $clubId,
+                    ':fn'     => $studentName,
+                    ':nick'   => $nickname ?: $studentName,
+                    ':gender' => $gender,
+                    ':bdate'  => $birthDate,
+                    ':pin'    => $pin,
+                    ':spw'    => $sessionsPerWeek,
+                    ':mfee'   => $monthlyFee
+                ]);
+                $archerId = (int)$pdo->lastInsertId();
+
+                $pdo->commit();
+
+                ActivityLogger::log(
+                    (int)($_SESSION['user_id'] ?? 0),
+                    $clubId,
+                    'MANUAL_REGISTER_ATHLETE',
+                    "Mendaftarkan manual atlet baru: {$studentName} (Username: @$username, PIN: $pin)"
+                );
+
+                $alertMsg = "✔ Atlet {$studentName} dan Akun Wali @{$username} berhasil dibuat manual!";
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $alertMsg = 'Gagal mendaftarkan atlet manual: ' . $e->getMessage();
+                $alertType = 'danger';
+            }
+        }
+    }
+
+    // 8c. Update Status Pendaftaran Atlet Masuk Sederhana
     if ($action === 'update_registration_status') {
         $regId = (int)($_POST['registration_id'] ?? 0);
         $newStatus = in_array($_POST['status'] ?? '', ['pending', 'verified', 'rejected']) ? $_POST['status'] : 'pending';
@@ -561,18 +802,22 @@ require_once __DIR__ . '/views/header.php';
         <div class="tab-pane fade" id="tab-galleries" role="tabpanel">
             <div class="card p-4 border-secondary shadow-sm mb-4">
                 <h5 class="fw-bold text-success mb-3"><i class="bi bi-plus-circle"></i> Tambah Foto Dokumentasi Galeri</h5>
-                <form action="" method="POST">
+                <form action="" method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="add_gallery">
                     <div class="row g-3">
-                        <div class="col-md-5">
+                        <div class="col-md-4">
                             <label class="form-label fw-bold">Judul Foto / Momen <span class="text-danger">*</span></label>
                             <input type="text" name="title" class="form-control bg-dark text-white border-secondary" placeholder="Contoh: Evaluasi Scoring Jarak 18m" required>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">URL / Path Foto <span class="text-danger">*</span></label>
-                            <input type="text" name="image_url" class="form-control bg-dark text-white border-secondary" placeholder="assets/img/... atau URL gambar" required>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Upload File Gambar:</label>
+                            <input type="file" name="gallery_file" class="form-control bg-dark text-white border-secondary" accept="image/jpeg,image/png,image/webp">
                         </div>
                         <div class="col-md-3">
+                            <label class="form-label fw-bold">Atau URL/Path Gambar:</label>
+                            <input type="text" name="image_url" class="form-control bg-dark text-white border-secondary" placeholder="assets/img/... atau uploads/...">
+                        </div>
+                        <div class="col-md-2">
                             <label class="form-label fw-bold">Kategori</label>
                             <select name="category" class="form-select bg-dark text-white border-secondary">
                                 <option value="latihan">Latihan Rutin</option>
@@ -583,7 +828,7 @@ require_once __DIR__ . '/views/header.php';
                         </div>
                         <div class="col-12">
                             <button type="submit" class="btn btn-success fw-bold text-white px-4">
-                                <i class="bi bi-upload"></i> Tambah Foto Galeri
+                                <i class="bi bi-upload"></i> Simpan Foto Galeri
                             </button>
                         </div>
                     </div>
@@ -595,7 +840,7 @@ require_once __DIR__ . '/views/header.php';
                 <?php foreach ($galleries as $g): ?>
                     <div class="col-md-3 col-sm-6">
                         <div class="card p-2 border-secondary h-100">
-                            <img src="<?= htmlspecialchars($g['image_url']) ?>" class="card-img-top rounded" style="height: 140px; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1511295742362-92c96b124e52?auto=format&fit=crop&w=600&q=80';">
+                            <img src="<?= htmlspecialchars($g['image_url']) ?>" class="card-img-top rounded" style="height: 140px; object-fit: cover;" loading="lazy" decoding="async" onerror="this.src='assets/img/gallery_range.jpg';">
                             <div class="card-body p-2 d-flex justify-content-between align-items-center">
                                 <div>
                                     <span class="badge bg-secondary" style="font-size: 10px;"><?= strtoupper($g['category']) ?></span>
@@ -618,11 +863,16 @@ require_once __DIR__ . '/views/header.php';
         <!-- TAB 5: PENDAFTARAN MASUK DARI WEB -->
         <div class="tab-pane fade" id="tab-registrations" role="tabpanel">
             <div class="card border-secondary shadow-sm">
-                <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
+                <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <h5 class="fw-bold text-white mb-0 d-flex align-items-center gap-2">
-                        <i class="bi bi-inbox-fill text-warning"></i> Data Calon Santri / Atlet yang Mendaftar Online
+                        <i class="bi bi-inbox-fill text-warning"></i> Data Calon Santri &bull; Menunggu ACC &amp; Penerbitan Akun
                     </h5>
-                    <span class="badge bg-secondary"><?= count($registrations) ?> Pendaftar</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-secondary"><?= count($registrations) ?> Pendaftar</span>
+                        <button type="button" class="btn btn-warning btn-sm fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#modalManualAthlete">
+                            <i class="bi bi-person-plus-fill"></i> Daftarkan Atlet Manual
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <?php if (empty($registrations)): ?>
@@ -638,15 +888,22 @@ require_once __DIR__ . '/views/header.php';
                                         <th>Nama Calon Atlet</th>
                                         <th>Orang Tua / Wali</th>
                                         <th>WhatsApp</th>
-                                        <th>Pilihan Program</th>
-                                        <th>Busur</th>
+                                        <th>Program &amp; Paket</th>
                                         <th>Status</th>
-                                        <th class="text-end">Aksi Verifikasi</th>
+                                        <th class="text-end">Aksi ACC / Terbitkan Akun</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($registrations as $reg): 
                                         $cleanPhone = preg_replace('/[^0-9]/', '', $reg['parent_phone']);
+                                        $spw = (int)($reg['sessions_per_week'] ?? 1);
+                                        $fee = (float)($reg['monthly_fee'] ?? 200000);
+                                        
+                                        // Default saran username: nama panggilan / depan + '_archery'
+                                        $cleanName = preg_replace('/[^a-z0-9]/', '', strtolower($reg['student_nickname'] ?: explode(' ', $reg['student_name'])[0]));
+                                        $suggestedUsername = $cleanName ? $cleanName . rand(10, 99) : 'atlet' . rand(100, 999);
+                                        $suggestedPassword = 'archery' . rand(100, 999);
+                                        $suggestedPin = str_pad((string)rand(1000, 9999), 4, '0', STR_PAD_LEFT);
                                     ?>
                                         <tr>
                                             <td class="text-muted small">
@@ -661,41 +918,108 @@ require_once __DIR__ . '/views/header.php';
                                             </td>
                                             <td><?= htmlspecialchars($reg['parent_name']) ?></td>
                                             <td>
-                                                <a href="https://wa.me/<?= $cleanPhone ?>?text=Halo%20Bapak/Ibu%20<?= urlencode($reg['parent_name']) ?>,%20kami%20dari%20<?= urlencode($club['club_name']) ?>%20ingin%20mengonfirmasi%20pendaftaran%20ananda%20<?= urlencode($reg['student_name']) ?>" target="_blank" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1">
+                                                <a href="https://wa.me/<?= $cleanPhone ?>" target="_blank" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1">
                                                     <i class="bi bi-whatsapp"></i> <?= htmlspecialchars($reg['parent_phone']) ?>
                                                 </a>
                                             </td>
                                             <td>
-                                                <span class="badge bg-info text-dark"><?= htmlspecialchars($reg['program_choice']) ?></span>
-                                            </td>
-                                            <td>
-                                                <?= $reg['has_own_bow'] ? '<span class="badge bg-success">Punya Busur</span>' : '<span class="badge bg-secondary">Pinjam Klub</span>' ?>
+                                                <span class="badge bg-info text-dark mb-1"><?= htmlspecialchars($reg['program_choice']) ?></span><br>
+                                                <span class="badge bg-warning text-dark"><?= $spw ?>x / Pekan</span>
+                                                <span class="text-muted small">Rp <?= number_format($fee, 0, ',', '.') ?></span>
                                             </td>
                                             <td>
                                                 <?php if ($reg['status'] === 'verified'): ?>
-                                                    <span class="badge bg-success">Terverifikasi</span>
+                                                    <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Akun Aktif</span>
                                                 <?php elseif ($reg['status'] === 'rejected'): ?>
                                                     <span class="badge bg-danger">Ditolak</span>
                                                 <?php else: ?>
-                                                    <span class="badge bg-warning text-dark">Pending</span>
+                                                    <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Menunggu ACC</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-end">
-                                                <form action="" method="POST" class="d-inline">
-                                                    <input type="hidden" name="action" value="update_registration_status">
-                                                    <input type="hidden" name="registration_id" value="<?= $reg['id'] ?>">
-                                                    <?php if ($reg['status'] !== 'verified'): ?>
-                                                        <button type="submit" name="status" value="verified" class="btn btn-success btn-sm" title="Verifikasi Pendaftaran">
-                                                            <i class="bi bi-check-lg"></i> Verifikasi
-                                                        </button>
-                                                    <?php else: ?>
-                                                        <button type="submit" name="status" value="pending" class="btn btn-outline-secondary btn-sm" title="Kembalikan ke Pending">
-                                                            Pending
-                                                        </button>
-                                                    <?php endif; ?>
-                                                </form>
+                                                <?php if ($reg['status'] === 'pending'): ?>
+                                                    <button type="button" class="btn btn-warning btn-sm fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#modalAccReg_<?= $reg['id'] ?>">
+                                                        ⚡ ACC &amp; Terbitkan Akun
+                                                    </button>
+                                                <?php else: ?>
+                                                    <span class="text-success small fw-bold"><i class="bi bi-check-all"></i> Terbit</span>
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
+
+                                        <!-- MODAL ACC & TERBITKAN AKUN -->
+                                        <div class="modal fade" id="modalAccReg_<?= $reg['id'] ?>" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-content bg-dark text-white border-secondary">
+                                                    <form action="" method="POST">
+                                                        <input type="hidden" name="action" value="acc_registration">
+                                                        <input type="hidden" name="registration_id" value="<?= $reg['id'] ?>">
+
+                                                        <div class="modal-header border-secondary">
+                                                            <h5 class="modal-title fw-bold text-warning">
+                                                                🎯 ACC Pendaftaran &amp; Buat Akun
+                                                            </h5>
+                                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <div class="p-3 rounded mb-3" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);">
+                                                                <div class="fw-bold text-white"><?= htmlspecialchars($reg['student_name']) ?> (Calon Atlet)</div>
+                                                                <div class="text-muted small">Wali Murid: <b><?= htmlspecialchars($reg['parent_name']) ?></b> &bull; WA: <?= htmlspecialchars($reg['parent_phone']) ?></div>
+                                                                <div class="text-info small mt-1">Program: <?= htmlspecialchars($reg['program_choice']) ?></div>
+                                                            </div>
+
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">Username Akun Wali Murid <span class="text-danger">*</span></label>
+                                                                <div class="input-group">
+                                                                    <span class="input-group-text bg-secondary text-white">@</span>
+                                                                    <input type="text" name="username" class="form-control bg-dark text-white border-secondary" value="<?= htmlspecialchars($suggestedUsername) ?>" required>
+                                                                </div>
+                                                                <div class="form-text text-muted">Digunakan wali murid untuk login di web klub.</div>
+                                                            </div>
+
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">Kata Sandi (Password) <span class="text-danger">*</span></label>
+                                                                <input type="text" name="password" class="form-control bg-dark text-white border-secondary" value="<?= htmlspecialchars($suggestedPassword) ?>" minlength="6" required>
+                                                                <div class="form-text text-muted">Minimal 6 karakter.</div>
+                                                            </div>
+
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">PIN Akses Atlet Mandiri <span class="text-danger">*</span></label>
+                                                                <input type="text" name="pin" class="form-control bg-dark text-white border-secondary" value="<?= htmlspecialchars($suggestedPin) ?>" maxlength="6" required>
+                                                                <div class="form-text text-muted">PIN 4-6 digit untuk scoring mandiri anak di lapangan.</div>
+                                                            </div>
+
+                                                            <div class="row g-2 mb-3">
+                                                                <div class="col-6">
+                                                                    <label class="form-label fw-bold">Frekuensi Latihan:</label>
+                                                                    <select name="sessions_per_week" class="form-select bg-dark text-white border-secondary">
+                                                                        <option value="1" <?= $spw === 1 ? 'selected' : '' ?>>1x Sepekan (4 sesi)</option>
+                                                                        <option value="2" <?= $spw === 2 ? 'selected' : '' ?>>2x Sepekan (8 sesi)</option>
+                                                                        <option value="3" <?= $spw === 3 ? 'selected' : '' ?>>3x Sepekan (12 sesi)</option>
+                                                                        <option value="4" <?= $spw === 4 ? 'selected' : '' ?>>4x Sepekan (16 sesi)</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <label class="form-label fw-bold">Iuran SPP Bulanan (Rp):</label>
+                                                                    <input type="number" name="monthly_fee" class="form-control bg-dark text-white border-secondary" value="<?= (int)$fee ?>" step="10000">
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="mb-2">
+                                                                <label class="form-label">Catatan ACC Internal / Target Awal:</label>
+                                                                <textarea name="acc_notes" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="Catatan untuk pelatih atau administrasi..."></textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer border-secondary">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                                                            <button type="submit" class="btn btn-warning fw-bold text-dark">
+                                                                ✔ Setujui (ACC) &amp; Terbitkan Akun
+                                                            </button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
@@ -703,6 +1027,119 @@ require_once __DIR__ . '/views/header.php';
                     <?php endif; ?>
                 </div>
             </div>
+        </div>
+
+        <!-- MODAL DAFTARKAN ATLET MANUAL OLEH ADMIN -->
+        <div class="modal fade" id="modalManualAthlete" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content bg-dark text-white border-secondary">
+                    <form action="" method="POST">
+                        <input type="hidden" name="action" value="manual_register_athlete">
+
+                        <div class="modal-header border-secondary">
+                            <h5 class="modal-title fw-bold text-warning">
+                                ➕ Daftarkan Atlet &amp; Akun Baru Secara Manual
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label class="form-label fw-bold">Nama Lengkap Atlet <span class="text-danger">*</span></label>
+                                    <input type="text" name="student_name" class="form-control bg-dark text-white border-secondary" required placeholder="Contoh: Zaid bin Haritsah">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Nama Panggilan</label>
+                                    <input type="text" name="student_nickname" class="form-control bg-dark text-white border-secondary" placeholder="Zaid">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Jenis Kelamin</label>
+                                    <select name="gender" class="form-select bg-dark text-white border-secondary">
+                                        <option value="L">Laki-laki (Ikhwan)</option>
+                                        <option value="P">Perempuan (Akhwat)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Tanggal Lahir</label>
+                                    <input type="date" name="birth_date" class="form-control bg-dark text-white border-secondary">
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Nama Orang Tua / Wali <span class="text-danger">*</span></label>
+                                    <input type="text" name="parent_name" class="form-control bg-dark text-white border-secondary" required placeholder="Bapak Abdullah">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Nomor WhatsApp Wali <span class="text-danger">*</span></label>
+                                    <input type="text" name="parent_phone" class="form-control bg-dark text-white border-secondary" required placeholder="08123456789">
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Username Login Wali <span class="text-danger">*</span></label>
+                                    <input type="text" name="username" class="form-control bg-dark text-white border-secondary" required placeholder="zaid_parent">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Password Login <span class="text-danger">*</span></label>
+                                    <input type="text" name="password" class="form-control bg-dark text-white border-secondary" required value="archery123" minlength="6">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">PIN Akses Atlet <span class="text-danger">*</span></label>
+                                    <input type="text" name="pin" class="form-control bg-dark text-white border-secondary" required value="1234" maxlength="6">
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Frekuensi Latihan:</label>
+                                    <select name="sessions_per_week" class="form-select bg-dark text-white border-secondary">
+                                        <option value="1">1x Sepekan (4 sesi / bln)</option>
+                                        <option value="2" selected>2x Sepekan (8 sesi / bln)</option>
+                                        <option value="3">3x Sepekan (12 sesi / bln)</option>
+                                        <option value="4">4x Sepekan (16 sesi / bln)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Nominal Iuran SPP Bulanan (Rp):</label>
+                                    <input type="number" name="monthly_fee" class="form-control bg-dark text-white border-secondary" value="350000" step="10000">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-secondary">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-warning fw-bold text-dark">
+                                💾 Simpan &amp; Terbitkan Atlet Sekarang
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <?php if (!empty($showWaModal)): ?>
+            <!-- MODAL KONFIRMASI WA KE ORTU -->
+            <div class="modal fade" id="modalWaSuccess" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content bg-dark text-white border-success">
+                        <div class="modal-header border-success">
+                            <h5 class="modal-title text-success fw-bold">
+                                💬 Kirim Kredensial Akun ke WhatsApp Ortu
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="text-muted small">Akun telah terbit di sistem. Klik tombol hijau di bawah untuk langsung mengirimkan rincian Username &amp; Password ke nomor WhatsApp wali murid (<?= htmlspecialchars($showWaModal['phone']) ?>):</p>
+                            <textarea class="form-control bg-dark text-light border-secondary small mb-3" rows="8" readonly><?= htmlspecialchars($showWaModal['message']) ?></textarea>
+                            <a href="https://wa.me/<?= $showWaModal['phone'] ?>?text=<?= urlencode($showWaModal['message']) ?>" target="_blank" class="btn btn-success btn-lg w-100 fw-bold">
+                                <i class="bi bi-whatsapp"></i> Buka WhatsApp &amp; Kirim Pesan
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const waModal = new bootstrap.Modal(document.getElementById('modalWaSuccess'));
+                    waModal.show();
+                });
+            </script>
+        <?php endif; ?>
         <!-- TAB 6: MESIN SEO & GOOGLE RANKING -->
         <div class="tab-pane fade" id="tab-seo" role="tabpanel">
             <div class="row g-4">
