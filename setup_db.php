@@ -577,17 +577,17 @@ try {
     $passHash = password_hash('admin123', PASSWORD_BCRYPT);
     $users = [
         [1, 'masteradmin', $passHash, 'Master Admin (Platform Owner)', 'master_admin', '081299887766', 'master@archery.local'],
-        [1, 'superadmin', $passHash, 'Master Super Admin', 'master_admin', '081299990001', 'superadmin@archery.local'],
+        [1, 'superadmin', $passHash, 'Super Admin (An-Nahl Archery)', 'super_admin', '081299990001', 'superadmin@annahl.local'],
         [1, 'coach_fadli', $passHash, 'Coach Fadli Archery', 'coach', '081299990002', 'coach@archery.local'],
         [1, 'ortu_budi', $passHash, 'Bapak Budi Santoso', 'parent', '081288889999', 'budi@gmail.com'],
         [2, 'admin_focus', $passHash, 'Admin Focus Archery', 'super_admin', '081377889900', 'admin@focusarchery.local']
     ];
     $stmtUser = $pdo->prepare("INSERT INTO `archery_users` (`club_id`, `username`, `password_hash`, `full_name`, `role`, `phone`, `email`)
-        VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `full_name`=VALUES(`full_name`), `role`=VALUES(`role`);");
+        VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `full_name`=VALUES(`full_name`), `role`=VALUES(`role`), `club_id`=VALUES(`club_id`);");
     foreach ($users as $u) {
         $stmtUser->execute($u);
     }
-    echo "✔ User masteradmin, superadmin, coach, parent, tenant admin terisi.\n";
+    echo "✔ User masteradmin, superadmin (An-Nahl), coach, parent, tenant admin terisi.\n";
 
     // Atlet (Ahmad di 7m & Fatimah di 5m)
     $archers = [

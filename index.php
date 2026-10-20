@@ -138,6 +138,18 @@ foreach ($schedules as $sch) {
             --primary-hover: <?= htmlspecialchars($primaryColor) ?>;
             --primary-glow: <?= htmlspecialchars($primaryColor) ?>40;
         }
+        html {
+            scroll-behavior: smooth;
+        }
+        section[id] {
+            scroll-margin-top: 85px;
+        }
+        .section-container {
+            max-width: 1560px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+        }
         .cms-hero-section {
             position: relative;
             background: radial-gradient(circle at 80% 20%, rgba(2, 132, 199, 0.25) 0%, rgba(11, 15, 25, 0.95) 70%),
@@ -244,7 +256,7 @@ foreach ($schedules as $sch) {
 
     <!-- TOP BAR RESMI IDENTITAS KLUB (EKSKLUSIF, BEBAS BOCOR SAAS) -->
     <div class="tenant-top-bar no-print">
-        <div class="container d-flex flex-wrap justify-content-between align-items-center">
+        <div class="container-fluid px-3 px-lg-5 section-container d-flex flex-wrap justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-3">
                 <span class="text-muted"><i class="bi bi-geo-alt-fill text-danger"></i> <?= htmlspecialchars($currentTenant['city']) ?>, Indonesia</span>
                 <span class="text-muted d-none d-md-inline">&bull;</span>
@@ -263,9 +275,9 @@ foreach ($schedules as $sch) {
         </div>
     </div>
 
-    <!-- MAIN NAVBAR WEB CMS -->
+    <!-- MAIN NAVBAR WEB CMS (FULL WIDTH LAPTOP COMFORT) -->
     <header class="nav-cms-header py-2">
-        <div class="container d-flex justify-content-between align-items-center">
+        <div class="container-fluid px-3 px-lg-5 section-container d-flex justify-content-between align-items-center">
             <a href="index.php" class="d-flex align-items-center gap-2 text-decoration-none">
                 <?php if (!empty($currentTenant['logo_url']) && $currentTenant['logo_url'] !== 'assets/img/default_logo.png'): ?>
                     <img src="<?= htmlspecialchars($currentTenant['logo_url']) ?>" alt="Logo" style="height: 42px; max-width: 50px; object-fit: contain; border-radius: 8px;">
@@ -315,8 +327,8 @@ foreach ($schedules as $sch) {
     <!-- 1. HERO SECTION -->
     <section class="cms-hero-section">
         <div class="cms-hero-target-bg"></div>
-        <div class="container position-relative">
-            <div class="row align-items-center">
+        <div class="container-fluid px-3 px-lg-5 section-container position-relative">
+            <div class="row align-items-center g-5">
                 <div class="col-lg-8">
                     <div class="sunnah-badge mb-3">
                         <i class="bi bi-stars"></i> Pusat Olahraga Sunnah &amp; Prestasi World Archery
@@ -324,7 +336,7 @@ foreach ($schedules as $sch) {
                     <h1 class="display-5 fw-extrabold text-white mb-3" style="line-height: 1.2;">
                         <?= htmlspecialchars($heroHeadline) ?>
                     </h1>
-                    <p class="lead text-muted mb-4" style="font-size: 1.15rem; max-width: 680px;">
+                    <p class="lead text-muted mb-4" style="font-size: 1.15rem; max-width: 720px; line-height: 1.7;">
                         <?= htmlspecialchars($heroSubheadline) ?>
                     </p>
 
@@ -361,13 +373,13 @@ foreach ($schedules as $sch) {
                         <div class="p-3 bg-dark rounded-circle mx-auto mb-3 text-warning" style="width: 80px; height: 80px; font-size: 38px; display: flex; align-items: center; justify-content: center;">
                             🏹
                         </div>
-                        <h5 class="fw-bold text-white mb-1">Mulai Uji Tembakan</h5>
-                        <p class="text-muted small mb-3">Siswa &amp; atlet dapat langsung mencatat tembakan, mengevaluasi grouping seri, dan mengikuti ujian kenaikan jarak.</p>
-                        <a href="login.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="btn btn-primary w-100 fw-bold py-2">
-                            Masuk Akun Atlet / Ortu
+                        <h5 class="fw-bold text-white mb-1">Portal Akses Atlet &amp; Anggota</h5>
+                        <p class="text-muted small mb-3">Catat tembakan scoring milimeter, evaluasi grouping seri, dan ikuti ujian kenaikan jarak resmi.</p>
+                        <a href="login.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="btn btn-primary w-100 fw-bold py-2 shadow-sm">
+                            Masuk Akun Anggota
                         </a>
                         <div class="text-muted small mt-2">
-                            Belum terdaftar? <a href="register_archer.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="text-warning">Daftar Santri Baru</a>
+                            Belum terdaftar? <a href="register_archer.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="text-warning text-decoration-none fw-bold">Daftar Santri Baru</a>
                         </div>
                     </div>
                 </div>
@@ -375,41 +387,50 @@ foreach ($schedules as $sch) {
         </div>
     </section>
 
-    <!-- 2. TENTANG KLUB & ADAB MEMANAH -->
+    <!-- 2. TENTANG KLUB & ADAB MEMANAH (RESPONSIF MERATA & ANTI-TERPOTONG) -->
     <section id="tentang" class="py-5" style="background: rgba(15, 23, 42, 0.5);">
-        <div class="container py-4">
-            <div class="row align-items-center g-5">
-                <div class="col-lg-6">
-                    <span class="badge bg-primary mb-2">Profil Klub</span>
-                    <h2 class="fw-bold text-white mb-3"><?= htmlspecialchars($aboutTitle) ?></h2>
-                    <p class="text-muted" style="line-height: 1.8;">
+        <div class="container-fluid px-3 px-lg-5 section-container py-4">
+            <div class="row align-items-stretch g-5">
+                <div class="col-lg-7 d-flex flex-column justify-content-center">
+                    <div class="d-inline-flex align-items-center gap-2 badge bg-primary bg-opacity-25 text-info border border-info border-opacity-25 px-3 py-2 rounded-pill mb-3" style="width: fit-content;">
+                        <i class="bi bi-shield-check"></i> Profil Resmi Perkumpulan
+                    </div>
+                    <h2 class="display-6 fw-extrabold text-white mb-3" style="line-height: 1.25;">
+                        <?= htmlspecialchars($aboutTitle) ?>
+                    </h2>
+                    <p class="text-muted lead mb-4" style="line-height: 1.8; font-size: 1.05rem;">
                         <?= nl2br(htmlspecialchars($aboutContent)) ?>
                     </p>
-                    <div class="row g-3 mt-2">
+                    <div class="row g-3">
                         <?php foreach ($aboutPoints as $point): ?>
-                            <div class="col-12 col-sm-6">
-                                <div class="d-flex align-items-start gap-2">
-                                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
-                                    <span class="text-light small"><?= htmlspecialchars($point) ?></span>
+                            <div class="col-12 col-md-6">
+                                <div class="d-flex align-items-start gap-2 p-2 rounded" style="background: rgba(255,255,255,0.02);">
+                                    <i class="bi bi-patch-check-fill text-success fs-5 flex-shrink-0"></i>
+                                    <span class="text-light small fw-medium"><?= htmlspecialchars($point) ?></span>
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
                 </div>
-                <div class="col-lg-6">
-                    <div class="card p-4 border-secondary shadow-sm" style="background: linear-gradient(135deg, rgba(2, 132, 199, 0.1), rgba(18, 24, 38, 0.95)); border-left: 5px solid var(--primary) !important;">
-                        <h5 class="fw-bold text-info mb-3 d-flex align-items-center gap-2">
-                            <i class="bi bi-shield-check"></i> Komitmen Mutu Pembinaan
-                        </h5>
-                        <p class="text-muted small mb-3">
-                            Setiap atlet dibimbing dengan standar keselamatan tinggi (Archery Safety Protocol), pembentukan postur tubuh simetris, dan kurikulum kenaikan jarak terukur (5m, 7m, 10m, 15m, 18m, hingga 30m &amp; 50m).
-                        </p>
+                <div class="col-lg-5">
+                    <div class="card p-4 h-100 border-secondary shadow-sm d-flex flex-column justify-content-between" style="background: linear-gradient(135deg, rgba(2, 132, 199, 0.12), rgba(18, 24, 38, 0.95)); border-left: 5px solid var(--primary) !important;">
+                        <div>
+                            <div class="badge bg-warning text-dark mb-3 px-3 py-2 fw-bold">
+                                <i class="bi bi-award-fill"></i> Standar Resmi World Archery
+                            </div>
+                            <h4 class="fw-bold text-white mb-3">
+                                Komitmen Mutu Pembinaan Panahan
+                            </h4>
+                            <p class="text-muted small mb-4" style="line-height: 1.7;">
+                                Setiap santri dan atlet dibimbing dengan standar keselamatan tinggi (Archery Safety Protocol), pembentukan postur tubuh simetris, dan kurikulum kenaikan jarak terukur (5m, 7m, 10m, 15m, 18m, hingga 30m &amp; 50m) dilengkapi laporan rapot resmi berkala.
+                            </p>
+                        </div>
                         <div class="d-flex align-items-center gap-3 pt-3 border-top border-secondary border-opacity-25">
-                            <div class="rounded-circle bg-warning text-dark fw-bold d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; font-size: 20px;">
+                            <div class="rounded-circle bg-warning text-dark fw-bold d-flex align-items-center justify-content-center shadow-sm" style="width: 52px; height: 52px; font-size: 24px;">
                                 🎯
                             </div>
                             <div>
-                                <h6 class="mb-0 text-white fw-bold"><?= htmlspecialchars($currentTenant['chairman_name']) ?></h6>
+                                <h6 class="mb-0 text-white fw-bold fs-6"><?= htmlspecialchars($currentTenant['chairman_name']) ?></h6>
                                 <span class="text-muted small">Ketua &amp; Penanggung Jawab Perkumpulan</span>
                             </div>
                         </div>
@@ -421,7 +442,7 @@ foreach ($schedules as $sch) {
 
     <!-- 3. FILOSOFI OLAHRAGA SUNNAH MEMANAH -->
     <section id="filosofi" class="py-5" style="border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
-        <div class="container text-center py-4">
+        <div class="container-fluid px-3 px-lg-5 section-container text-center py-4">
             <div class="sunnah-badge mb-2">
                 <i class="bi bi-moon-stars"></i> Sunnah Nabi ﷺ
             </div>
@@ -470,7 +491,7 @@ foreach ($schedules as $sch) {
 
     <!-- 4. PROGRAM KURSUS & KELAS PANAHAN -->
     <section id="program" class="py-5" style="background: rgba(15, 23, 42, 0.4);">
-        <div class="container py-4">
+        <div class="container-fluid px-3 px-lg-5 section-container py-4">
             <div class="text-center mb-5">
                 <span class="badge bg-warning text-dark mb-2">Pilihan Pembinaan</span>
                 <h2 class="fw-bold text-white mb-2">Program Kelas &amp; Kategori Busur</h2>
@@ -522,7 +543,7 @@ foreach ($schedules as $sch) {
 
     <!-- 5. JADWAL LATIHAN & LOKASI LAPANGAN -->
     <section id="jadwal" class="py-5">
-        <div class="container py-4">
+        <div class="container-fluid px-3 px-lg-5 section-container py-4">
             <div class="row g-5 align-items-center">
                 <div class="col-lg-6">
                     <span class="badge bg-info text-dark mb-2">Waktu Operasional</span>
@@ -580,7 +601,7 @@ foreach ($schedules as $sch) {
 
     <!-- 6. TIM PELATIH BERLISENSI -->
     <section id="pelatih" class="py-5" style="background: rgba(15, 23, 42, 0.4);">
-        <div class="container py-4">
+        <div class="container-fluid px-3 px-lg-5 section-container py-4">
             <div class="text-center mb-5">
                 <span class="badge bg-success mb-2">Instruktur Ahli</span>
                 <h2 class="fw-bold text-white mb-2">Tim Pelatih Berlisensi</h2>
@@ -614,7 +635,7 @@ foreach ($schedules as $sch) {
 
     <!-- 7. GALERI FASILITAS & PRESTASI -->
     <section id="galeri" class="py-5">
-        <div class="container py-4">
+        <div class="container-fluid px-3 px-lg-5 section-container py-4">
             <div class="text-center mb-5">
                 <span class="badge bg-primary mb-2">Dokumentasi</span>
                 <h2 class="fw-bold text-white mb-2">Fasilitas Range &amp; Prestasi Atlet</h2>
@@ -647,7 +668,7 @@ foreach ($schedules as $sch) {
 
     <!-- 8. BANNER CTA PENDAFTARAN ATLET BARU -->
     <section class="py-5" style="background: linear-gradient(135deg, rgba(2, 132, 199, 0.25), rgba(15, 23, 42, 0.98)); border-top: 1px solid var(--border-color);">
-        <div class="container text-center py-4">
+        <div class="container-fluid px-3 px-lg-5 section-container text-center py-4">
             <h2 class="fw-extrabold text-white mb-3">Siap Menghidupkan Olahraga Sunnah &amp; Meraih Prestasi?</h2>
             <p class="text-muted lead mx-auto mb-4" style="max-width: 650px;">
                 Daftarkan putra-putri Anda sekarang di <?= htmlspecialchars($currentTenant['club_name']) ?>. Tempat terbatas untuk menjaga kualitas pembinaan intensif.
@@ -665,14 +686,13 @@ foreach ($schedules as $sch) {
 
     <!-- FOOTER WEB CMS -->
     <footer class="py-4" style="background: var(--bg-card); border-top: 1px solid var(--border-color);">
-        <div class="container text-center text-muted small">
+        <div class="container-fluid px-3 px-lg-5 section-container text-center text-muted small">
             <div class="d-flex justify-content-center gap-4 mb-3 flex-wrap">
                 <a href="#tentang" class="text-muted text-decoration-none">Tentang</a>
                 <a href="#program" class="text-muted text-decoration-none">Program</a>
                 <a href="#jadwal" class="text-muted text-decoration-none">Jadwal</a>
                 <a href="register_archer.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="text-warning text-decoration-none fw-bold">Pendaftaran Atlet</a>
                 <a href="login.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="text-info text-decoration-none fw-bold">Portal Member</a>
-                <a href="master_tenants.php" class="text-secondary text-decoration-none">SaaS Platform</a>
             </div>
             <p class="mb-1">&copy; <?= date('Y') ?> <strong><?= htmlspecialchars($currentTenant['club_name']) ?></strong>. All rights reserved.</p>
             <p class="mb-0" style="font-size: 11px; opacity: 0.7;">Powered by Target Archery Multi-Tenant SaaS Platform &bull; Built with World Archery Precision &amp; Sunnah Values.</p>

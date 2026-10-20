@@ -1,13 +1,17 @@
 <?php
 // login.php - Dual Mode Login dengan Pop-up Modal Error Keren & Direct WA Admin
 require_once __DIR__ . '/config/auth.php';
+require_once __DIR__ . '/config/tenant_resolver.php';
 
 $error = '';
-$stmtClub = $pdo->prepare("SELECT club_name, admin_wa_phone, logo_url FROM archery_clubs WHERE id = 1 LIMIT 1");
-$stmtClub->execute();
-$club = $stmtClub->fetch();
-$adminWa = $club['admin_wa_phone'] ?? '081299887766';
-$clubName = $club['club_name'] ?? 'AN-NAHL ARCHERY CLUB';
+
+// Resolusi Tenant Dinamis dari Subdomain Host
+$currentTenant = TenantResolver::resolve($pdo);
+$tenantId = (int)$currentTenant['id'];
+$adminWa = $currentTenant['admin_wa_phone'] ?? '081299887766';
+$clubName = $currentTenant['club_name'] ?? 'AN-NAHL ARCHERY CLUB';
+$clubLogo = $currentTenant['logo_url'] ?? '';
+$clubFavicon = $currentTenant['favicon_url'] ?? 'assets/img/default_favicon.png';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $loginType = $_POST['login_type'] ?? 'user';
@@ -23,12 +27,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->fetch();
 
             if ($user && password_verify($password, $user['password_hash'])) {
+                // Multi-Tenant Boundary: Jika bukan master_admin dan login di subdomain spesifik klub lain
+                if ($user['role'] !== 'master_admin' && !TenantResolver::isPlatformRoot()) {
+                    if ((int)$user['club_id'] !== $tenantId) {
+                        $userClubStmt = $pdo->prepare("SELECT club_name, subdomain_slug FROM archery_clubs WHERE id = :cid LIMIT 1");
+                        $userClubStmt->execute([':cid' => $user['club_id']]);
+                        $userClub = $userClubStmt->fetch();
+                        $correctDomain = $userClub ? TenantResolver::getBaseUrl($userClub) . '/login.php' : 'login.php';
+
+                        $error = "Akun Anda terdaftar di <b>" . htmlspecialchars($userClub['club_name'] ?? 'Klub Lain') . "</b>. Silakan login di portal klub Anda: <a href='{$correctDomain}' class='text-warning text-decoration-underline'>{$correctDomain}</a>";
+                        goto end_login_handler;
+                    }
+                }
+
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['full_name'] = $user['full_name'];
                 $_SESSION['role'] = $user['role'];
                 $_SESSION['phone'] = $user['phone'];
-                $_SESSION['club_id'] = $user['club_id'];
+                $_SESSION['club_id'] = (int)$user['club_id'];
 
                 // Set anak aktif pertama jika orang tua
                 $children = Auth::getChildren($pdo);
@@ -36,11 +53,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['active_child_id'] = $children[0]['id'];
                 }
 
-                // Redirect sesuai role
+                // Redirect sesuai role secara aman
                 if ($user['role'] === 'master_admin') {
                     header('Location: master_tenants.php');
                 } elseif ($user['role'] === 'super_admin') {
-                    header('Location: cms_admin.php');
+                    header('Location: app_dashboard.php');
                 } elseif ($user['role'] === 'coach') {
                     header('Location: coach_dashboard.php');
                 } else {
@@ -64,11 +81,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $archer = $stmt->fetch();
 
             if ($archer) {
+                if (!TenantResolver::isPlatformRoot() && (int)$archer['club_id'] !== $tenantId) {
+                    $error = 'PIN akses atlet ini terdaftar di klub lain. Silakan login di portal resmi klub yang sesuai.';
+                    goto end_login_handler;
+                }
+
                 $_SESSION['archer_device_id'] = $archer['id'];
                 $_SESSION['role'] = 'archer';
                 $_SESSION['full_name'] = $archer['full_name'];
                 $_SESSION['active_child_id'] = $archer['id'];
-                $_SESSION['club_id'] = $archer['club_id'];
+                $_SESSION['club_id'] = (int)$archer['club_id'];
 
                 header('Location: app_dashboard.php');
                 exit;
@@ -80,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+end_login_handler:
 ?>
 <!DOCTYPE html>
 <html lang="id" data-theme="dark" data-bs-theme="dark">
@@ -178,11 +201,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div style="text-align: center; margin-bottom: 1.75rem;">
-            <div style="width: 58px; height: 58px; margin: 0 auto 0.75rem; border-radius: 50%; background: conic-gradient(from 0deg, var(--ring-gold), var(--ring-red), var(--ring-blue), var(--ring-gold)); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-glow);">
-                <span style="font-size: 26px;">🎯</span>
-            </div>
+            <?php if (!empty($clubLogo) && $clubLogo !== 'assets/img/default_logo.png'): ?>
+                <img src="<?= htmlspecialchars($clubLogo) ?>" alt="Logo" style="height: 60px; max-width: 120px; object-fit: contain; margin-bottom: 0.75rem;">
+            <?php else: ?>
+                <div style="width: 58px; height: 58px; margin: 0 auto 0.75rem; border-radius: 50%; background: conic-gradient(from 0deg, var(--ring-gold), var(--ring-red), var(--ring-blue), var(--ring-gold)); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-glow);">
+                    <span style="font-size: 26px;">🎯</span>
+                </div>
+            <?php endif; ?>
             <h1 style="font-size: 1.5rem; margin-bottom: 0.2rem;"><?= htmlspecialchars($clubName) ?></h1>
-            <p style="color: var(--text-muted); font-size: 0.85rem;">Portal Skoring Panahan & Monitoring Atlet</p>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Portal Skoring Panahan &amp; Monitoring Atlet</p>
         </div>
 
         <!-- DUAL TABS: AKUN KELUARGA/COACH/ADMIN VS PERANGKAT LAPANGAN ATLET -->
@@ -200,7 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="hidden" name="login_type" value="user">
             <div class="form-group">
                 <label class="form-label">Username / No. WhatsApp / Email</label>
-                <input type="text" name="username" class="form-control" id="userInput" placeholder="Contoh: ortu_budi atau coach_fadli atau superadmin" required>
+                <input type="text" name="username" class="form-control" id="userInput" placeholder="Masukkan username atau no. WA" required>
             </div>
             <div class="form-group">
                 <label class="form-label">Kata Sandi (Password)</label>
@@ -216,7 +243,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="hidden" name="login_type" value="pin">
             <div class="form-group">
                 <label class="form-label">6-Digit PIN Akses Atlet (Anak)</label>
-                <input type="password" name="access_pin" class="form-control" id="pinInput" placeholder="Contoh: 111111" maxlength="6" style="letter-spacing: 0.5rem; text-align: center; font-size: 1.35rem; font-weight: 800;" required>
+                <input type="password" name="access_pin" class="form-control" id="pinInput" placeholder="••••••" maxlength="6" style="letter-spacing: 0.5rem; text-align: center; font-size: 1.35rem; font-weight: 800;" required>
                 <small style="display: block; color: var(--text-dim); margin-top: 0.5rem; font-size: 0.75rem;">
                     💡 Anak dapat memasukkan PIN di smartphone masing-masing untuk langsung membuka papan bidik tanpa melihat menu keuangan orang tua.
                 </small>
@@ -226,22 +253,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </button>
         </form>
 
-        <!-- DEMO SHORTCUTS UNTUK TESTING CEPAT -->
-        <div class="demo-box">
-            <b>⚡ Akses Cepat Demo:</b><br>
-            <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px;">
-                <button type="button" class="demo-btn" style="color: #f59e0b; font-weight: 800; border-color: #f59e0b;" onclick="fillUser('masteradmin', 'admin123')">👑 Master Admin (SaaS)</button>
-                <button type="button" class="demo-btn" onclick="fillUser('superadmin', 'admin123')">Admin An-Nahl</button>
-                <button type="button" class="demo-btn" onclick="fillUser('admin_focus', 'admin123')">Admin Focus Archery</button>
-                <button type="button" class="demo-btn" onclick="fillUser('coach_fadli', 'admin123')">Coach Fadli</button>
-            </div>
-            <div style="margin-top: 4px;">
-                <b>Ortu (2 Anak):</b> <button type="button" class="demo-btn" onclick="fillUser('ortu_budi', 'admin123')">Login Ortu Budi</button>
-            </div>
-            <div style="margin-top: 4px;">
-                <b>PIN Anak 1:</b> <button type="button" class="demo-btn" onclick="fillPin('111111')">111111 (Ahmad)</button>
-                <b>PIN Anak 2:</b> <button type="button" class="demo-btn" onclick="fillPin('222222')">222222 (Fatimah)</button>
-            </div>
+        <!-- INFO BANTUAN OPERASIONAL RESMI KLUB -->
+        <div style="margin-top: 1.5rem; padding: 0.85rem; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); font-size: 0.78rem; text-align: center;">
+            <span class="text-muted"><i class="bi bi-shield-lock-fill text-info"></i> Portal Terautentikasi Standar World Archery</span><br>
+            <span class="text-muted" style="font-size: 0.72rem;">Mengalami kendala akun? Hubungi Admin Perkumpulan:</span>
+            <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $adminWa) ?>?text=Halo%20Admin%20<?= urlencode($clubName) ?>,%20saya%20mengalami%20kendala%20saat%20login%20ke%20sistem" target="_blank" class="text-success fw-bold text-decoration-none d-block mt-1">
+                <i class="bi bi-whatsapp"></i> Bantuan WhatsApp Admin (<?= htmlspecialchars($adminWa) ?>)
+            </a>
         </div>
 
         <div style="margin-top: 1.25rem; text-align: center; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">

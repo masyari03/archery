@@ -198,45 +198,52 @@
   - **Kenyamanan Spacing & Tipografi**:
     - Padding dan margin yang lapang, tinggi navbar konsisten 54px, zero horizontal text overflow di semua ukuran resolusi layar (laptop 1366px, monitor besar, tablet, maupun HP).
 
-### 32. 💎 Penyempurnaan Arsitektur SaaS Eksekutif: Header Full-Width Laptop, Heading 2-Baris Hero, Showcase Tenant Dinamis Langsung ke Subdomain Klien, Pembersihan Demo Portal, & Penghapusan Kebocoran Dropdown di Web Tenant
-- **Header Full-Width & Judul Hero 2-Baris Rapi di Laptop (`saas_marketing.php`)**:
-  - Perlebar container navbar dan hero section agar proporsional dan membentang lapang hingga ujung layar laptop (`max-width: 1440px` / `container-fluid px-lg-5`).
-  - Atur tipografi judul hero agar tampil gagah dan seimbang dalam **tepat 2 baris** (tanpa pecah jadi 3 atau 4 baris):
-    - Baris 1: `Solusi Software All-in-One Manajemen Klub`
-    - Baris 2: `& Scoring Panahan Modern Berstandar Dunia`
-- **Showcase Tenant Dinamis Otomatis Bertambah & Tautan Langsung ke Subdomain Klien (Gambar 2)**:
-  - Query dinamis `SELECT * FROM archery_clubs WHERE is_active = 1` pada section `#showcase` di `saas_marketing.php`.
-  - Desain grid kartu tenant yang otomatis bertambah rapi (*auto-fill responsive grid*) setiap kali ada klien baru mendaftar di sistem SaaS tanpa perlu edit kode lagi.
-  - Tampilkan badge domain Level 1 resmi: `https://[subdomain_slug].codika.my.id` (atau custom domain mandiri).
-  - Tombol "Kunjungi Website Resmi Klub ➔" langsung membuka URL subdomain resmi milik klien di tab baru tanpa parameter percobaan.
-- **Pembersihan Demo Portal Live (Gambar 3)**:
-  - Hapus dropdown pemilih klub dari kartu "Live Simulation Portal" di `saas_marketing.php`.
-  - Hadirkan kartu Live Demo interaktif yang bersih & meyakinkan dengan tombol CTA tunggal: **"🎯 Coba Demo Live Portal Panahan ➔"** yang langsung membuka portal interaktif.
-  - Tampilkan info akun uji coba (Coach, Ortu, Santri) secara elegan di kartu tersebut.
-- **Isolasi Penuh Web Tenant Publik (`index.php`) & Eliminasi Kebocoran SaaS (Gambar 4)**:
-  - Hapus total dropdown "Pilih Klub:" dari top bar di `index.php`.
-  - Hapus total tombol "👑 Master SaaS" dari halaman publik tenant klub.
-  - Ganti top bar publik klub dengan info resmi klub:
-    - Kiri: Lokasi Kota Klub & No. WhatsApp Resmi Klub.
-    - Kanan: Jadwal Jam Operasional / Hari Latihan & Tautan Media Sosial Klub.
-  - Di `config/tenant_resolver.php`, jadikan deteksi Host Subdomain Level 1 (`annahl.codika.my.id`, `focus.codika.my.id`) sebagai **Prioritas Tertinggi (Prioritas 1)** dan batasi parameter `?club=` hanya untuk domain platform root (`archery.codika.my.id` atau `localhost`). Dengan demikian, saat mengakses `annahl.codika.my.id`, sistem 100% terisolasi ke An-Nahl dan mustahil tertimpa klub lain.
+### 34. 📐 Perapihan Layout Lebar Merata & Responsif ke Samping pada Seluruh Tenant (`index.php`, `saas_marketing.php`) + Auto Scroll-Margin Top
+- **Masalah pada Gambar 1**:
+  - Halaman `index.php` pada tenant (`annahl.codika.my.id/#tentang`) saat diklik menu navigasi terpotong kepalanya oleh header sticky (`scroll-margin-top` belum ada).
+  - Konten di layar laptop terkungkung dalam container sempit dan tidak merata ke samping, menyisakan ruang kosong abu-abu berlebih di kiri-kanan.
+- **Rencana Perbaikan**:
+  1. Pasang aturan global `html { scroll-behavior: smooth; } section[id] { scroll-margin-top: 90px; }` sehingga semua anchor (`#tentang`, `#filosofi`, `#program`, `#jadwal`, `#pelatih`, `#galeri`, `#daftar`, `#kontak`) mendarat presisi di bawah navbar tanpa menutupi judul.
+  2. Perluas seluruh container section di `index.php` menggunakan `container-fluid px-3 px-lg-5` dengan batas elegan `max-width: 1560px` agar merata, simetris, dan gagah di laptop maupun monitor besar.
+  3. Tata ulang grid kolom `#tentang`, `#filosofi`, `#program`, dan `#jadwal` agar kartu komitmen, tabel jadwal, dan galeri sejajar sempurna dan tidak terjepit.
 
-### 33. 🏆 Pengaturan Navicon (Favicon), Logo & Branding Dinamis (Super Admin & Master Admin) + Ultra-Professional Sport-Tech Polish
-- **Pengaturan Navicon (Favicon) & Logo di Super Admin (`settings.php`)**:
-  - Kolom `favicon_url` & `logo_url` di tabel `archery_clubs`.
-  - Super Admin dapat mengubah URL Logo Klub dan URL Navicon/Favicon klub di menu Pengaturan Klub (`settings.php`).
-  - Browser tab di seluruh halaman web publik klub (`index.php`) dan portal member (`app_dashboard.php`, `login.php`, dll.) otomatis menampilkan favicon resmi milik klub tersebut.
-- **Pengaturan Navicon (Favicon), Logo, & Brand di Master Admin (`master_cms.php`)**:
-  - Kolom `platform_brand_name`, `platform_logo_url`, dan `platform_favicon_url` di tabel `archery_saas_marketing_cms`.
-  - Master Admin dapat mengubah Logo Platform, Favicon Platform, dan Nama Brand SaaS langsung dari formulir CMS (`master_cms.php`).
-  - Halaman web penjualan SaaS (`saas_marketing.php`) dan seluruh portal Master Admin (`master_tenants.php`, `master_billing.php`, `master_cms.php`) otomatis menggunakan favicon dan logo resmi platform.
-- **Peningkatan Visual Web Penjualan SaaS & Web Publik Klien Menjadi Sangat Profesional (World-Class Sport-Tech)**:
-  - Tampilan visual premium kelas dunia: kontras tajam, aksen emas cincin X World Archery & biru elektrik, bayangan halus (*subtle glassmorphism*), tipografi presisi, dan susunan hero yang memikat calon mitra klub panahan se-Indonesia.
+### 35. 🔐 Pemisahan Ketat & Perbaikan Role `super_admin` vs `master_admin` + Multi-Tenant Scoping Login
+- **Penyebab Masalah Pengguna**:
+  - Di `setup_db.php`, user `superadmin` sebelumnya keliru diberi role `'master_admin'` (`[1, 'superadmin', $passHash, 'Master Super Admin', 'master_admin', ...]`).
+  - Akibatnya saat login sebagai superadmin An-Nahl, pengguna mendapatkan wewenang Master Admin platform dan melihat data SaaS/klub lain.
+  - Di `login.php`, data klub hardcoded `WHERE id = 1` alih-alih mengambil klub dari subdomain host aktif (`TenantResolver::resolve($pdo)`).
+- **Rencana Perbaikan**:
+  1. Ubah role user `superadmin` (dan admin klub lainnya) secara permanen di database dan `setup_db.php` menjadi murni **`super_admin`** dengan `club_id = 1` (An-Nahl).
+  2. Pisahkan akun khusus platform owner: **`masteradmin`** (role `master_admin`), hanya akun ini yang berhak mengakses menu SaaS, Master Tenants, Billing Antar-Klub, dan Marketing CMS.
+  3. Perbarui `login.php` agar dinamis mendeteksi tenant aktif via subdomain host (`TenantResolver::resolve($pdo)`) dan memvalidasi bahwa `super_admin`, `coach`, `parent`, dan `archer` hanya dapat mengakses klub tempat mereka terdaftar (mencegah akses lintas klub).
+
+### 36. 📋 Matriks & Rincian Hak Akses Lengkap 5 Role (Buku Panduan Hak Akses Sistem)
+- Dokumentasikan dan tegakkan secara ketat hierarki 5 role:
+  1. **👑 Master Admin (Platform Owner / Codika)**:
+     - Akses: `master_tenants.php`, `master_billing.php`, `master_cms.php`, impersonasi tenant klub klien, kontrol lisensi & kuota klub.
+     - Fungsi: Pemilik platform bisnis SaaS, menerima bayaran sewa dari pengurus klub.
+  2. **🛡️ Super Admin (Ketua / Pengurus Klub Klien, misal An-Nahl Archery)**:
+     - Akses: `cms_admin.php`, `settings.php` (logo, favicon, warna, WA Fonnte), `admin_distances.php` (master jarak), `admin_approvals.php` (pengesahan rapot & naik jarak), `admin_rbac.php` (atur menu internal), `bills.php` (tagihan SPP atlet).
+     - Fungsi: Manajer operasional klub panahan, tidak bisa melihat klub lain atau tagihan sewa SaaS platform.
+  3. **🎯 Coach (Pelatih Berlisensi Klub)**:
+     - Akses: `coach_dashboard.php` (pantau murid binaan), `scoring.php` (input skor target plotter milimeter), `report_session.php` & `report_monthly.php` (evaluasi rapot resmi), ACC/rekomendasi ujian naik jarak atlet.
+     - Fungsi: Pembina teknis atlet di lapangan.
+  4. **👨‍👩‍👧‍👦 Parent (Orang Tua Santri / Atlet)**:
+     - Akses: `app_dashboard.php` (grafik skor anak, multi-child switcher), `report_session.php` & `report_monthly.php` (lihat & cetak rapot A4 resmi), `bills.php` (cek status SPP & upload bukti/konfirmasi WA), `share_card.php` (kartu prestasi medsos).
+     - Fungsi: Wali murid yang memantau perkembangan dan membayar iuran.
+  5. **🏹 Archer (Atlet / Santri Mandiri)**:
+     - Akses: Login instan via PIN 6-digit di perangkat lapangan (`login.php?type=pin`), `app_dashboard.php`, `scoring.php` (catat skor latihan mandiri).
+     - Fungsi: Praktisi tembakan panahan.
+
+### 37. 💎 Pembersihan Total "Badge/Teks Demo Cacat" & Elevasi Komersial Siap Jual (Production Commercial Grade)
+- Hapus seluruh kata-kata bernada uji coba amatir/demo murahan seperti *"Coba demo gratis"*, *"akun percobaan"*, *"simulasi klub"*, dll.
+- Ganti dengan terminologi komersial profesional: *"Mulai Digitalisasi Klub Panahan Anda"*, *"Konsultasi Kemitraan Resmi"*, *"Akses Portal Pengguna"*.
+- Pastikan seluruh halaman web publik dan portal klien siap dipresentasikan dan dijual ke calon klien klub panahan di seluruh Indonesia dengan rasa percaya diri tinggi.
 
 ---
 
 ## 🏆 STATUS EKSEKUSI & DEPLOYMENT
-- **Poin 1 s/d 31**: 100% Selesai & Berfungsi Sempurna.
-- **Poin 32 & 33**: Menunggu konfirmasi pengguna untuk eksekusi terpadu.
+- **Poin 1 s/d 33**: 100% Selesai & Berfungsi.
+- **Poin 34, 35, 36, 37**: Sedang diajukan ke Pengguna untuk Persetujuan Plan Kumulatif (Tahap 1).
 
 
