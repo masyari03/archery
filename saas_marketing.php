@@ -85,6 +85,18 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
     <style>
+        html {
+            scroll-behavior: smooth;
+        }
+        section[id] {
+            scroll-margin-top: 85px;
+        }
+        .section-container {
+            max-width: 1560px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+        }
         .saas-header {
             background: rgba(11, 15, 25, 0.92);
             backdrop-filter: blur(14px);
@@ -157,7 +169,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
 
     <!-- TOP HEADER SAAS PLATFORM (FULL WIDTH LAPTOP COMFORT) -->
     <header class="py-3 border-bottom sticky-top saas-header">
-        <div class="container-fluid px-3 px-lg-5 d-flex justify-content-between align-items-center" style="max-width: 1560px;">
+        <div class="container-fluid px-3 px-lg-5 section-container d-flex justify-content-between align-items-center">
             <a href="saas_marketing.php" class="d-flex align-items-center gap-2 text-decoration-none">
                 <?php if (!empty($mkt['platform_logo_url']) && $mkt['platform_logo_url'] !== 'assets/img/default_logo.png'): ?>
                     <img src="<?= htmlspecialchars($mkt['platform_logo_url']) ?>" alt="Logo" style="height: 42px; max-width: 150px; object-fit: contain;">
@@ -196,7 +208,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
 
     <!-- HERO SECTION MARKETING (FULL WIDTH 1560PX & PRECISE 2-LINE TITLE) -->
     <section class="saas-hero text-center text-lg-start">
-        <div class="container-fluid px-3 px-lg-5 position-relative" style="max-width: 1560px;">
+        <div class="container-fluid px-3 px-lg-5 section-container position-relative">
             <div class="row align-items-center g-5">
                 <div class="col-lg-7">
                     <div class="badge bg-primary bg-opacity-25 text-info border border-info border-opacity-25 px-3 py-2 rounded-pill mb-3">
@@ -273,7 +285,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
 
     <!-- FITUR UTAMA SOFTWARE -->
     <section id="fitur" class="py-5">
-        <div class="container py-4">
+        <div class="container-fluid px-3 px-lg-5 section-container py-4">
             <div class="text-center mb-5">
                 <span class="badge bg-info text-dark mb-2">Keunggulan Teknologi</span>
                 <h2 class="fw-bold text-white mb-2">Mengapa Klub Panahan Memilih Platform Ini?</h2>
@@ -300,7 +312,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
 
     <!-- SHOWCASE TENANT KLUB MITRA (OTOMATIS BERTAMBAH DARI DATABASE & DIRECT SUBDOMAIN) -->
     <section id="showcase" class="py-5" style="background: rgba(15, 23, 42, 0.4); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
-        <div class="container py-4">
+        <div class="container-fluid px-3 px-lg-5 section-container py-4">
             <div class="text-center mb-5">
                 <span class="badge bg-warning text-dark mb-2">Tenant Showcase</span>
                 <h2 class="fw-bold text-white mb-2">Klub-Klub Panahan yang Telah Bergabung</h2>
@@ -353,7 +365,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
 
     <!-- PAKET HARGA & SIMULASI -->
     <section id="harga" class="py-5">
-        <div class="container py-4">
+        <div class="container-fluid px-3 px-lg-5 section-container py-4">
             <div class="text-center mb-5">
                 <span class="badge bg-success mb-2">Investasi Terjangkau</span>
                 <h2 class="fw-bold text-white mb-2">Skema Berlangganan SaaS yang Fleksibel</h2>
@@ -396,7 +408,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
 
     <!-- FAQ -->
     <section id="faq" class="py-5 saas-faq-section" style="border-top: 1px solid var(--border-color);">
-        <div class="container py-4">
+        <div class="container-fluid px-3 px-lg-5 section-container py-4">
             <div class="text-center mb-5">
                 <span class="badge bg-secondary mb-2">Bantuan &amp; FAQ</span>
                 <h2 class="fw-bold mb-2">Pertanyaan yang Sering Diajukan</h2>
@@ -427,7 +439,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
 
     <!-- FOOTER SAAS -->
     <footer class="py-4 text-center text-muted small border-top" style="border-color: var(--border-color) !important; background: var(--bg-main);">
-        <div class="container">
+        <div class="container-fluid px-3 px-lg-5 section-container">
             <p class="mb-1">&copy; <?= date('Y') ?> <strong>TARGET ARCHERY SAAS PLATFORM</strong> &bull; Platform Digitalisasi Panahan Indonesia</p>
             <p class="mb-0" style="font-size: 11px; opacity: 0.7;">Powered by Codika Multi-Tenant Architecture &bull; World Archery Precision Engineering</p>
         </div>

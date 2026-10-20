@@ -240,10 +240,43 @@
 - Ganti dengan terminologi komersial profesional: *"Mulai Digitalisasi Klub Panahan Anda"*, *"Konsultasi Kemitraan Resmi"*, *"Akses Portal Pengguna"*.
 - Pastikan seluruh halaman web publik dan portal klien siap dipresentasikan dan dijual ke calon klien klub panahan di seluruh Indonesia dengan rasa percaya diri tinggi.
 
+### 38. 🎯 Sinkronisasi Anti-Terpotong Anchor Header & Layout Presisi di Web Utama SaaS (`saas_marketing.php`) Tanpa Mengubah Isi Konten
+- **Masalah dari Screenshot Pengguna (`archery.codika.my.id/index.php#fitur`)**:
+  - Saat pengunjung mengeklik menu navigasi header pada web utama (`Fitur Software`, `Klub Mitra`, `Paket Harga`, `Tanya Jawab`), posisi mendaratnya elemen meluncur ke puncak layar (`y = 0`), sehingga badge `KEUNGGULAN TEKNOLOGI` dan judul section terpotong/tertutup di bawah sticky navbar (`.saas-header`).
+  - Web tenant (`annahl.codika.my.id`) sudah berhasil diperbaiki dan tampil sempurna dengan `scroll-margin-top: 85px` serta `scroll-behavior: smooth`.
+- **Rencana Perbaikan Presisi (Zero Content Modification)**:
+  1. **CSS Anchor Navigation Fix**:
+     - Tambahkan aturan pada stylesheet `saas_marketing.php`:
+       ```css
+       html {
+           scroll-behavior: smooth;
+       }
+       section[id] {
+           scroll-margin-top: 85px;
+       }
+       .section-container {
+           max-width: 1560px;
+           margin-left: auto;
+           margin-right: auto;
+           width: 100%;
+       }
+       ```
+  2. **Harmonisasi Container Section (Full-Width Edge-to-Edge)**:
+     - Ganti pembungkus sempit `<div class="container py-4">` pada section `#fitur`, `#showcase`, `#harga`, `#faq`, dan `<footer>` menjadi `<div class="container-fluid px-3 px-lg-5 section-container py-4">`.
+     - Layout di layar laptop menjadi lapang, nyaman, merata ke samping seperti web tenant.
+  3. **Zero Content Modification Guarantee**:
+     - 100% seluruh teks, judul, deskripsi fitur, daftar tenant klub, simulasi demo, tabel harga, FAQ, dan tombol kontak WhatsApp dipertahankan utuh tanpa perubahan isi sedikitpun.
+  4. **Lint, Deploy & Remote Verification**:
+     - Jalankan `php -l saas_marketing.php`.
+     - Deploy ke laptopserver `100.119.52.45` via `deploy_target_archery.py`.
+     - Verifikasi live `curl.exe -s "https://archery.codika.my.id/index.php" | findstr "scroll-margin-top"`.
+     - Commit dan push ke GitHub repository `main`.
+
 ---
 
 ## 🏆 STATUS EKSEKUSI & DEPLOYMENT
-- **Poin 1 s/d 33**: 100% Selesai & Berfungsi.
-- **Poin 34, 35, 36, 37**: Sedang diajukan ke Pengguna untuk Persetujuan Plan Kumulatif (Tahap 1).
+- **Poin 1 s/d 37**: 100% Selesai, Teruji, dan Aktif di Server.
+- **Poin 38**: Sedang diajukan ke Pengguna untuk Persetujuan Plan Kumulatif (Tahap 1).
+
 
 
