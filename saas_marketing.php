@@ -226,8 +226,8 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
                             <select class="form-select" onchange="if(this.value) window.open(this.value, '_blank')">
                                 <option value="">-- Pilih Demo Klub Panahan --</option>
                                 <?php foreach ($allTenants as $t): ?>
-                                    <option value="index.php?club=<?= urlencode($t['subdomain_slug']) ?>">
-                                        🎯 <?= htmlspecialchars($t['club_name']) ?> (<?= htmlspecialchars($t['city']) ?>)
+                                    <option value="<?= htmlspecialchars(TenantResolver::getBaseUrl($t)) ?>">
+                                        🎯 <?= htmlspecialchars($t['club_name']) ?> (<?= htmlspecialchars($t['city']) ?>) - <?= htmlspecialchars($t['subdomain_slug']) ?>.codika.my.id
                                     </option>
                                 <?php endforeach; ?>
                             </select>

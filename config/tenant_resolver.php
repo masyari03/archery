@@ -54,7 +54,7 @@ class TenantResolver {
             return $tenant;
         }
 
-        // 3. Cek Subdomain (misal: annahl.archery.codika.my.id -> slug: annahl, atau annahl-archery.codika.my.id -> slug: annahl)
+        // 3. Cek Subdomain Level 1 (misal: annahl.codika.my.id -> slug: annahl, atau annahl-archery.codika.my.id)
         $parts = explode('.', $cleanHost);
         if (count($parts) >= 3) {
             $subdomain = $parts[0];
@@ -63,8 +63,9 @@ class TenantResolver {
                 $cleanSlug = substr($subdomain, 0, -8);
             }
 
-            // Abaikan subdomain www, app, portal, archery (root platform)
-            if (!in_array($cleanSlug, ['www', 'app', 'portal', 'master', 'archery'])) {
+            // Abaikan subdomain khusus sistem non-archery & platform root
+            $reserved = ['archery', 'www', 'app', 'portal', 'master', 'robakus', 'kas', 'capaian', 'api', 'quran', 'protofolio', 'portfolio'];
+            if (!in_array($cleanSlug, $reserved)) {
                 $stmt = $pdo->prepare("SELECT * FROM archery_clubs WHERE (subdomain_slug = :sub OR club_code = :code) AND is_active = 1 LIMIT 1");
                 $stmt->execute([':sub' => $cleanSlug, ':code' => $cleanSlug]);
                 $tenant = $stmt->fetch();
@@ -147,17 +148,16 @@ class TenantResolver {
         // Jika root domain platform langsung
         $rootDomains = [
             'archery.codika.my.id',
-            'archery.codika.id',
-            'codika.my.id',
-            'codika.id',
-            'archery.local'
+            'archery.local',
+            'localhost',
+            '127.0.0.1'
         ];
 
         return in_array($cleanHost, $rootDomains);
     }
 
     /**
-     * Dapatkan Base URL Resmi Klub (Otomatis beralih ke Custom Domain jika ada, atau Subdomain Platform jika belum ada)
+     * Dapatkan Base URL Resmi Klub (Otomatis beralih ke Custom Domain jika ada, atau Subdomain Level 1 Platform jika belum ada)
      */
     public static function getBaseUrl(?array $club = null): string {
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
@@ -168,8 +168,8 @@ class TenantResolver {
 
         if (!empty($club['subdomain_slug'])) {
             $slug = trim($club['subdomain_slug']);
-            // Domain induk platform
-            $parentDomain = 'archery.codika.my.id';
+            // Domain induk platform level 1
+            $parentDomain = 'codika.my.id';
             return "{$scheme}://{$slug}.{$parentDomain}";
         }
 

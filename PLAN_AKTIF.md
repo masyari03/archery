@@ -135,11 +135,29 @@
 - Mengirimkan data pendaftaran ke `archery_cms_registrations`.
 - Notifikasi instan via WhatsApp Bot Fonnte langsung ke nomor admin klub saat ada pendaftar baru.
 
+### 28. 🌐 Standarisasi Total Domain Induk ke `codika.my.id` & Resolusi Multi-Tenant Bebas Tabrakan
+- **Pemisahan Total dari `codika.id`**: Seluruh sistem Target Archery dipusatkan 100% pada domain `codika.my.id`, sehingga port 3000 pada `*.codika.id` (Quran & Sekolah) bebas dari risiko tabrakan (*zero collision*).
+- **Struktur Domain Platform & Tenant**:
+  - **Portal SaaS Utama (Master Admin)**: `https://archery.codika.my.id`
+  - **Tenant Subdomain Otomatis**:
+    - Format 1-Level (Universal SSL Gratis Cloudflare): `https://[slug]-archery.codika.my.id` (contoh: `https://annahl-archery.codika.my.id`).
+    - Format 2-Level: `https://[slug].archery.codika.my.id` (contoh: `https://annahl.archery.codika.my.id` dengan CNAME `*.archery`).
+    - Fallback Langsung: `https://archery.codika.my.id/?club=[slug]`.
+    - Custom Domain Mandiri: `https://[custom_domain]` (jika klub punya domain sendiri).
+- **Pembaruan Kode Terpadu**:
+  - `config/tenant_resolver.php`: Standarisasi parent domain ke `codika.my.id`, pemetaan `getBaseUrl()`, dan Canonical SEO tags.
+  - `sitemap.php` & `robots.txt`: Seluruh referensi XML dan crawler merujuk ke `archery.codika.my.id`.
+  - Cloudflare Ingress laptopserver: Menjamin `archery.codika.my.id`, `*.archery.codika.my.id`, dan `*-archery.codika.my.id` mengarah presisi ke port 3008.
+  - `README.md`: Update tautan portofolio GitHub resmi ke `codika.my.id`.
+
+### 29. 🌓 Dua Tema Adaptif (Gelap 🌙 & Terang ☀️) Kontras Tinggi di Seluruh Halaman
+- Penyesuaian otomatis warna huruf: saat terang menjadi gelap tajam (`#0f172a`), saat gelap menjadi putih bersih (`#f8fafc`).
+- Sakelar toggle tema di seluruh header publik & internal dengan inisialisasi instan (*anti-flicker*).
+
 ---
 
 ## 🏆 STATUS EKSEKUSI & DEPLOYMENT
-- **Seluruh 27 Poin Fitur**: 100% Selesai & Berfungsi Sempurna.
-- **Laptopserver & Cloudflare**: Aktif di `archery.codika.my.id` (Port 3008).
-- **Zero HTTP 500 & Security**: Terverifikasi lolos 20 Standar Keamanan & Zero Internal Server Bug Protocol.
+- **Poin 1 s/d 27 & 29**: 100% Selesai & Berfungsi Sempurna.
+- **Poin 28 (Standarisasi Total `codika.my.id`)**: Siap dieksekusi setelah konfirmasi pengguna.
 
 

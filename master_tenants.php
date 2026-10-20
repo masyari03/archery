@@ -261,8 +261,11 @@ $activeTenants = count(array_filter($allClubs, fn($c) => $c['subscription_status
                                 <span class="badge badge-gold" style="font-size: 0.75rem;"><?= htmlspecialchars($club['club_code']) ?></span>
                             </td>
                             <td>
-                                <b style="font-size: 1rem; color: #fff;"><?= htmlspecialchars($club['club_name']) ?></b><br>
-                                <span style="font-size: 0.75rem; color: var(--text-muted);"><?= htmlspecialchars($club['city'] ?? 'Kota') ?> • <?= htmlspecialchars($club['chairman_name']) ?></span>
+                                <b style="font-size: 1rem;"><?= htmlspecialchars($club['club_name']) ?></b><br>
+                                <span style="font-size: 0.75rem; color: var(--text-muted);"><?= htmlspecialchars($club['city'] ?? 'Kota') ?> • <?= htmlspecialchars($club['chairman_name']) ?></span><br>
+                                <a href="<?= htmlspecialchars(TenantResolver::getBaseUrl($club)) ?>" target="_blank" style="font-size: 0.72rem; color: #38bdf8; font-weight: 600;">
+                                    🌐 <?= htmlspecialchars(str_replace(['http://', 'https://'], '', TenantResolver::getBaseUrl($club))) ?> ➔
+                                </a>
                             </td>
                             <td>
                                 <span style="font-size: 0.85rem; font-weight: 600; color: var(--primary);">

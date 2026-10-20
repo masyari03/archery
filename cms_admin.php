@@ -829,9 +829,9 @@ require_once __DIR__ . '/views/navbar.php';
                                 <label class="form-label text-muted small">Subdomain Bawaan Platform (Selalu Aktif):</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-dark text-muted border-secondary">https://</span>
-                                    <input type="text" class="form-control bg-dark text-white border-secondary" value="<?= htmlspecialchars($club['subdomain_slug']) ?>.archery.codika.my.id" readonly>
+                                    <input type="text" class="form-control bg-dark text-white border-secondary fw-bold" value="<?= htmlspecialchars($club['subdomain_slug']) ?>.codika.my.id" readonly>
                                     <span class="input-group-text bg-success bg-opacity-25 text-success border-secondary">
-                                        <i class="bi bi-shield-check"></i> SSL Aktif
+                                        <i class="bi bi-shield-check"></i> SSL Aktif (Level 1)
                                     </span>
                                 </div>
                             </div>

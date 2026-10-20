@@ -31,12 +31,26 @@ def check_remote():
         '/share_card.php',
         '/report_session.php'
     ]
-    print("[REMOTE HTTP CHECK ON PORT 3008]:")
-    for p in paths:
-        stdin, stdout, stderr = c.exec_command(f'curl -s -o /dev/null -w "%{{http_code}}" http://127.0.0.1:3008{p}')
-        code = stdout.read().decode('utf-8', errors='replace').strip()
-        print(f"  {p} -> HTTP {code}")
-        
+    print("\n[LEVEL 1 SUBDOMAIN HOST ROUTING CHECK]:")
+    hosts = [
+        'archery.codika.my.id',
+        'annahl.codika.my.id',
+        'focus.codika.my.id',
+        'randomclub.codika.my.id'
+    ]
+    for h in hosts:
+        cmd = f"curl -s -H 'Host: {h}' http://127.0.0.1:3008/ | grep -i '<title>' | head -n 1"
+        stdin, stdout, stderr = c.exec_command(cmd)
+        title = stdout.read().decode('utf-8', errors='replace').strip()
+        print(f"  Host: {h} -> {title}")
+
+    print("\n[DIRECT /sitemap.xml CHECK VIA ROUTER]:")
+    cmd_sm = "curl -s http://127.0.0.1:3008/sitemap.xml"
+    stdin, stdout, stderr = c.exec_command(cmd_sm)
+    sm = stdout.read().decode('utf-8', errors='replace')
+    for line in sm.splitlines()[:10]:
+        print(" ", line.strip())
+
     c.close()
 
 if __name__ == '__main__':

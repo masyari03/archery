@@ -16,7 +16,7 @@
 | Layanan | URL Produksi | Deskripsi |
 | :--- | :--- | :--- |
 | **SaaS Platform Landing Page** | `https://archery.codika.my.id` | Web pemasaran & portal pendaftaran klub panahan se-Indonesia |
-| **Tenant Club Showcase** | `https://annahl.archery.codika.my.id` | Website resmi & portal atlet Klub Panahan An-Nahl Archery |
+| **Tenant Club Showcase (Level 1)** | `https://annahl.codika.my.id` | Website resmi & portal atlet Klub Panahan An-Nahl Archery |
 | **Dynamic XML Sitemap** | `https://archery.codika.my.id/sitemap.php` | Sitemap dinamis multi-tenant untuk Google Search Console |
 | **Robots Directive** | `https://archery.codika.my.id/robots.txt` | Aturan perayapan crawler & proteksi rute privat |
 
@@ -25,8 +25,8 @@
 ## 🚀 Fitur Unggulan (Key Features)
 
 ### 1. 🏢 Isolated Multi-Tenant Architecture & Domain Engine
-- **Namespace Non-Bentrok**: Menggunakan domain isolasi `*.archery.codika.my.id` dan `*.archery.codika.id` yang diposisikan di atas wildcard `*.codika.id` pada reverse proxy / Cloudflare Tunnel.
-- **Auto-Switch Domain Resolver**: Mendukung **Custom Domain Mandiri** (misal: `annahlarchery.com`) dan **Subdomain Otomatis** (`annahl.archery.codika.my.id`). Jika klub mengisi custom domain pada CMS, seluruh tautan, aset, dan Canonical SEO URL otomatis berganti ke domain tersebut.
+- **Level 1 Subdomain Mandiri**: Menggunakan domain isolasi tingkat 1 `*.codika.my.id` (misal: `https://annahl.codika.my.id`, `https://focus.codika.my.id`) dengan Universal SSL Cloudflare aktif otomatis tanpa error sertifikat.
+- **Auto-Switch Domain Resolver**: Mendukung **Custom Domain Mandiri** (misal: `annahlarchery.com`) dan **Subdomain Level 1 Otomatis** (`annahl.codika.my.id`). Jika klub mengisi custom domain pada CMS, seluruh tautan, aset, dan Canonical SEO URL otomatis berganti ke domain tersebut.
 - **Strict Multi-Tenant Scoping**: Setiap query database membaca data dengan klausa `WHERE club_id = :club_id` untuk menjamin isolasi data 100% antar klub.
 
 ### 2. 🎯 Interactive Target Plotter (SVG Real-Time Scoring)

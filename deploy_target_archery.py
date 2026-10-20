@@ -120,7 +120,7 @@ Environment=DB_PORT=3306
 Environment=DB_NAME=archery
 Environment=DB_USER=arif
 Environment=DB_PASSWORD=codika
-ExecStart=/usr/bin/php -S 127.0.0.1:{PORT} -t {REMOTE_DIR}
+ExecStart=/usr/bin/php -S 127.0.0.1:{PORT} -t {REMOTE_DIR} {REMOTE_DIR}/router.php
 Restart=always
 RestartSec=5
 
@@ -139,10 +139,9 @@ WantedBy=multi-user.target
     run_cmd(c, 'systemctl status archery.service --no-pager')
 
     # 4. Update Cloudflare Tunnel Config di Laptopserver
-    print("\n[CLOUDFLARE] Memeriksa & Mengupdate Ingress Cloudflare Tunnel...")
-    check_tunnel = run_cmd(c, 'grep -q "archery.codika.id" ~/.cloudflared/config.yml 2>/dev/null && echo "FOUND" || echo "NOT_FOUND"')
+    print("\n[CLOUDFLARE] Memeriksa & Mengupdate Ingress Cloudflare Tunnel (Level 1 Subdomain *.codika.my.id)...")
     
-    # Python script di remote untuk menyusun ingress archery di atas *.codika.id
+    # Python script di remote untuk menyusun ingress archery Level 1 di atas *.codika.id
     update_cf_script = f"""python3 -c "
 path = '/home/{USER}/.cloudflared/config.yml'
 with open(path, 'r') as f:
@@ -150,37 +149,30 @@ with open(path, 'r') as f:
 
 # Hapus entri archery lama jika ada
 import re
-content = re.sub(r'\\s*# Target Archery[^\\n]*\\n\\s*- hostname: archery\\.codika\\.my\\.id\\n\\s*service: http://localhost:3008\\n?', '', content)
+content = re.sub(r'\\s*# Target Archery[^\\n]*\\n(\\s*-[^\\n]+\\n\\s*service: http://localhost:3008\\n?)+', '', content)
 
-archery_ingress = '''  # Target Archery Scoring & Multi-Tenant SaaS (Above *.codika.id)
-  - hostname: archery.codika.id
-    service: http://localhost:{PORT}
-
-  - hostname: \\"*.archery.codika.id\\"
-    service: http://localhost:{PORT}
-
+archery_ingress = '''  # Target Archery Scoring & Multi-Tenant SaaS (Level 1 Subdomain *.codika.my.id)
   - hostname: archery.codika.my.id
     service: http://localhost:{PORT}
 
   - hostname: \\"*.archery.codika.my.id\\"
     service: http://localhost:{PORT}
 
+  - hostname: \\"*.codika.my.id\\"
+    service: http://localhost:{PORT}
+
 '''
 
-if 'archery.codika.id' not in content:
-    target_marker = '- hostname: \\"*.codika.id\\"'
-    if target_marker in content:
-        content = content.replace(target_marker, archery_ingress + '  ' + target_marker)
-    else:
-        # Fallback di atas catch-all
-        fallback_marker = '- service: http://localhost:3002'
-        content = content.replace(fallback_marker, archery_ingress + '  ' + fallback_marker)
-    
-    with open(path, 'w') as f:
-        f.write(content)
-    print('Ingress Archery Multi-Tenant berhasil diperbarui!')
+target_marker = '- hostname: \\"*.codika.id\\"'
+if target_marker in content:
+    content = content.replace(target_marker, archery_ingress + '  ' + target_marker)
 else:
-    print('Ingress Archery Multi-Tenant sudah lengkap terpasang.')
+    fallback_marker = '- service: http://localhost:3002'
+    content = content.replace(fallback_marker, archery_ingress + '  ' + fallback_marker)
+
+with open(path, 'w') as f:
+    f.write(content)
+print('Ingress Archery Level 1 Subdomain (*.codika.my.id) berhasil diperbarui!')
 " """
     run_cmd(c, update_cf_script)
     run_cmd(c, f'sudo -S cp /home/{USER}/.cloudflared/config.yml /etc/cloudflared/config.yml 2>/dev/null', use_sudo=True)
