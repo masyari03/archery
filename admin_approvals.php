@@ -183,18 +183,9 @@ $stmtLogs = $pdo->prepare("
 ");
 $stmtLogs->execute([':cid' => $clubId]);
 $promotionLogs = $stmtLogs->fetchAll();
+$pageTitle = "ACC Ujian Kenaikan Jarak - TARGET ARCHERY";
+require_once __DIR__ . '/views/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ACC Ujian Kenaikan Jarak - TARGET ARCHERY</title>
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
-</head>
-<body>
-
-<?php include __DIR__ . '/views/navbar.php'; ?>
 
 <main class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">

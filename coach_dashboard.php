@@ -104,67 +104,58 @@ if ($currentRole === 'super_admin') {
     $stmtRecentSessions->execute([':cid' => $clubId, ':coach_id' => $coachId]);
 }
 $recentSessions = $stmtRecentSessions->fetchAll();
+$pageTitle = "Dashboard Pelatih - TARGET ARCHERY";
+require_once __DIR__ . '/views/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dashboard Pelatih - TARGET ARCHERY</title>
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
-    <style>
-        .coach-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1.25rem;
-            margin-top: 1rem;
-        }
-        .archer-card {
-            border: 1px solid var(--border-color);
-            background: var(--bg-card);
-            border-radius: var(--radius-md);
-            padding: 1.25rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            box-shadow: var(--shadow);
-            transition: transform 0.2s, border-color 0.2s;
-        }
-        .archer-card:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
-        }
-        .archer-card-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 0.75rem;
-        }
-        .archer-avatar {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: rgba(2, 132, 199, 0.15);
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 1.2rem;
-            border: 1px solid var(--primary);
-        }
-        .stat-chip {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--border-color);
-            padding: 0.35rem 0.65rem;
-            border-radius: var(--radius-sm);
-            font-size: 0.78rem;
-        }
-    </style>
-</head>
-<body>
-
-<?php include __DIR__ . '/views/navbar.php'; ?>
+<style>
+    .coach-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.25rem;
+        margin-top: 1rem;
+    }
+    .archer-card {
+        border: 1px solid var(--border-color);
+        background: var(--bg-card);
+        border-radius: var(--radius-md);
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-shadow: var(--shadow);
+        transition: transform 0.2s, border-color 0.2s;
+    }
+    .archer-card:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+    .archer-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    .archer-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(2, 132, 199, 0.15);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 1.2rem;
+        border: 1px solid var(--primary);
+    }
+    .stat-chip {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border-color);
+        padding: 0.35rem 0.65rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.78rem;
+    }
+</style>
 
 <main class="container">
     <!-- HEADER BAR -->

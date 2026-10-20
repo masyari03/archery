@@ -22,18 +22,9 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([':aid' => $archerId]);
 $bills = $stmt->fetchAll();
+$pageTitle = "Iuran & Pembayaran - TARGET ARCHERY";
+require_once __DIR__ . '/views/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iuran & Pembayaran - TARGET ARCHERY</title>
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
-</head>
-<body>
-
-<?php include __DIR__ . '/views/navbar.php'; ?>
 
 <main class="container">
     <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">

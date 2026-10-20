@@ -875,3 +875,77 @@ a:hover {
     color: #475569 !important;
 }
 
+/* ==========================================================================
+   BOOTSTRAP 5.3 & TARGET ARCHERY THEME HARMONIZATION
+   ========================================================================== */
+.card {
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    color: var(--text-main) !important;
+}
+
+.modal-content {
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-lg) !important;
+    color: var(--text-main) !important;
+    backdrop-filter: blur(25px) !important;
+}
+
+.modal-header, .modal-footer {
+    border-color: var(--border-color) !important;
+}
+
+.table {
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+.table > :not(caption) > * > * {
+    background-color: transparent !important;
+    color: inherit !important;
+    border-bottom-color: var(--border-color) !important;
+}
+
+.form-control, .form-select {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-main) !important;
+    border-radius: var(--radius-sm) !important;
+}
+.form-control:focus, .form-select:focus {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25) !important;
+    color: var(--text-main) !important;
+}
+
+[data-theme="light"] .form-control, [data-theme="light"] .form-select {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+[data-theme="light"] .form-control:focus, [data-theme="light"] .form-select:focus {
+    background-color: #ffffff !important;
+    border-color: var(--primary) !important;
+}
+
+.nav-tabs {
+    border-bottom-color: var(--border-color) !important;
+}
+.nav-tabs .nav-link {
+    color: var(--text-muted) !important;
+    border: 1px solid transparent !important;
+    font-weight: 600 !important;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important;
+}
+.nav-tabs .nav-link:hover {
+    color: var(--primary) !important;
+    border-color: var(--border-color) var(--border-color) transparent !important;
+}
+.nav-tabs .nav-link.active {
+    color: var(--primary) !important;
+    background-color: var(--bg-card) !important;
+    border-color: var(--border-color) var(--border-color) transparent !important;
+}
+

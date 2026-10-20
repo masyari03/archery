@@ -245,17 +245,9 @@ foreach ($invoices as $iv) {
 // Ambil Pengaturan Master Admin
 $saasSettings = $pdo->query("SELECT * FROM archery_saas_settings WHERE id = 1")->fetch();
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Laporan Tagihan & Pembayaran SaaS - TARGET ARCHERY</title>
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
-</head>
-<body>
-
-<?php include __DIR__ . '/views/navbar.php'; ?>
+$pageTitle = "Laporan Tagihan & Pembayaran SaaS - TARGET ARCHERY";
+require_once __DIR__ . '/views/header.php';
+?>
 
 <main class="container">
     <!-- HEADER -->

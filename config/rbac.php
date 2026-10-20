@@ -34,6 +34,11 @@ class RBAC {
             return true;
         }
 
+        // Menu RBAC wajib selalu bisa diakses Super Admin agar tidak terkunci
+        if ($menuKey === 'rbac' && $role === 'super_admin') {
+            return true;
+        }
+
         // Cache lookup
         $cacheKey = "{$clubId}_{$role}_{$menuKey}";
         if (isset(self::$cache[$cacheKey])) {

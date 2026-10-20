@@ -53,19 +53,10 @@ foreach ($monthSessions as $ms) {
 
 $monthAvgScore = $monthTotalSessions > 0 ? round($monthTotalScore / $monthTotalSessions, 1) : 0;
 $monthAccuracy = $monthTotalPossible > 0 ? round(($monthTotalScore / $monthTotalPossible) * 100, 1) : 0.0;
+$pageTitle = "Rekap Perkembangan Bulanan - " . htmlspecialchars($currentArcher['full_name']);
+require_once __DIR__ . '/views/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rekap Perkembangan Bulanan - <?= htmlspecialchars($currentArcher['full_name']) ?></title>
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
-    <link rel="stylesheet" href="assets/css/print_report.css">
-</head>
-<body style="background: #0f172a;">
-
-<?php include __DIR__ . '/views/navbar.php'; ?>
+<link rel="stylesheet" href="assets/css/print_report.css">
 
 <!-- FILTER TOOLBAR (NO-PRINT) -->
 <div class="no-print" style="max-width: 860px; margin: 1.5rem auto 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; padding: 0 1rem;">

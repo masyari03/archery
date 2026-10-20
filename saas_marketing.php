@@ -30,7 +30,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="dark" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -44,6 +44,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
         (function() {
             const savedTheme = localStorage.getItem('archery_theme') || 'dark';
             document.documentElement.setAttribute('data-theme', savedTheme);
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
         })();
     </script>
 
@@ -401,6 +402,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
             const current = document.documentElement.getAttribute('data-theme') || 'dark';
             const next = current === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', next);
+            document.documentElement.setAttribute('data-bs-theme', next);
             localStorage.setItem('archery_theme', next);
             updateThemeIcons(next);
         }
@@ -413,6 +415,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
 
         document.addEventListener('DOMContentLoaded', () => {
             const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', current);
             updateThemeIcons(current);
         });
     </script>

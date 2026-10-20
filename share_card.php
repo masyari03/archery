@@ -58,43 +58,34 @@ $cardPayload = [
         ];
     }, $shots)
 ];
+$pageTitle = "Kartu Medsos Atlet - " . htmlspecialchars($session['archer_name']);
+require_once __DIR__ . '/views/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kartu Medsos Atlet - <?= htmlspecialchars($session['archer_name']) ?></title>
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
-    <style>
-        .format-tabs {
-            display: inline-flex;
-            background: rgba(0,0,0,0.3);
-            border-radius: var(--radius-sm);
-            padding: 4px;
-            gap: 4px;
-            margin-bottom: 1.5rem;
-        }
-        .format-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            padding: 0.5rem 1.25rem;
-            border-radius: 6px;
-            font-family: 'Outfit', sans-serif;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .format-btn.active {
-            background: var(--primary);
-            color: #000;
-        }
-    </style>
-</head>
-<body>
-
-<?php include __DIR__ . '/views/navbar.php'; ?>
+<style>
+    .format-tabs {
+        display: inline-flex;
+        background: rgba(0,0,0,0.3);
+        border-radius: var(--radius-sm);
+        padding: 4px;
+        gap: 4px;
+        margin-bottom: 1.5rem;
+    }
+    .format-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        padding: 0.5rem 1.25rem;
+        border-radius: 6px;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .format-btn.active {
+        background: var(--primary);
+        color: #000;
+    }
+</style>
 
 <main class="container">
     <div style="text-align: center; margin-bottom: 1.5rem;">

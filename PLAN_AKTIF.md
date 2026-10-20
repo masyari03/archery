@@ -154,10 +154,54 @@
 - Penyesuaian otomatis warna huruf: saat terang menjadi gelap tajam (`#0f172a`), saat gelap menjadi putih bersih (`#f8fafc`).
 - Sakelar toggle tema di seluruh header publik & internal dengan inisialisasi instan (*anti-flicker*).
 
+### 30. 🎨 Standarisasi Total Layout & CSS Terpadu (`views/header.php` & `views/footer.php`)
+- **Penyebab Tampilan Berantakan Sebelumnya**: 
+  - Halaman `app_dashboard.php`, `cms_admin.php`, `master_cms.php`, dan `admin_rbac.php` memanggil `navbar.php` tanpa tag `<!DOCTYPE html>`, `<head>`, maupun `<link>` CSS apapun, sehingga browser merender halaman sebagai teks mentah tanpa gaya.
+  - Halaman internal lainnya (`coach_dashboard.php`, `master_tenants.php`, `settings.php`, `bills.php`, dll.) hanya memuat `style.css` tanpa CDN Bootstrap 5.3.3 CSS & Bootstrap Icons, sehingga ikon panahan hilang dan tata letak grid/tombol bergeser.
+  - `views/footer.php` belum menyertakan `bootstrap.bundle.min.js`, menyebabkan seluruh modal dialog (input tembakan, filter, dsb.) tidak bisa terbuka saat diklik.
+  - Skrip tema ganda belum menyinkronkan atribut resmi `data-bs-theme="dark|light"` ke elemen `<html>`, mengakibatkan kartu modal Bootstrap berlatar putih kontras di tengah latar belakang gelap.
+- **Rencana Eksekusi Perbaikan Menyeluruh**:
+  1. **Buat Layout Header Terpadu `views/header.php`**:
+     - Struktur HTML5 valid: `<!DOCTYPE html>`, `<html lang="id">`, `<head>`.
+     - Injeksi Google Fonts (`Outfit` & `Plus Jakarta Sans`).
+     - Injeksi CDN Bootstrap 5.3.3 CSS & CDN Bootstrap Icons 1.11.3.
+     - Injeksi Target Archery Core Theme `assets/css/style.css?v=<?= time() ?>`.
+     - Inisialisasi instan anti-flicker tema ganda (`data-theme` dan `data-bs-theme`).
+     - Otomatis memuat `views/navbar.php`.
+  2. **Defensive Guard di `views/navbar.php`**:
+     - Tambahkan proteksi `if (!defined('ARCHERY_HEADER_LOADED'))`: jika ada file yang kelupaan memanggil `header.php`, `navbar.php` akan otomatis menginjeksi stylesheet darurat agar tidak ada satu pun halaman yang tampil telanjang tanpa CSS.
+  3. **Penyempurnaan `views/footer.php`**:
+     - Muat `bootstrap.bundle.min.js` dari CDN resmi.
+     - Muat skrip global helper (modal, tooltips, theme synchronization).
+  4. **Harmonisasi Komponen di `assets/css/style.css`**:
+     - Integrasikan styling kartu Bootstrap `.card`, modal `.modal-content`, tabel `.table`, form `.form-control`, dan tab `.nav-tabs` agar menyatu dengan palet tema gelap & terang Target Archery.
+  5. **Refactoring Bersih pada 16 Halaman Terkait**:
+     - Ganti pembuka halaman di `app_dashboard.php`, `coach_dashboard.php`, `cms_admin.php`, `master_cms.php`, `admin_rbac.php`, `master_tenants.php`, `master_billing.php`, `settings.php`, `bills.php`, `admin_distances.php`, `admin_approvals.php`, `plotter.php`, `share_card.php`, `report_session.php`, `report_monthly.php`, dan `login.php` agar menggunakan arsitektur layout terpadu standar.
+
+### 31. 🎯 Perapihan Header Nyaman & Modern + Penghilangan Otomatis Menu saat RBAC Nonaktif
+- **Penghilangan Menu Total Berdasarkan RBAC**:
+  - Jika hak akses menu diatur tidak aktif (`is_visible = 0`) atau role pengguna tidak memiliki izin, tulisan, ikon, dan tautan menu di header atas **HILANG TOTAL (Zero Residual Item)**, bukan sekadar dinonaktifkan atau digelapkan.
+  - Jika seluruh sub-item dalam sebuah kelompok/dropdown (misal: semua submenu Laporan) tidak aktif, maka **judul tombol dropdown kelompok tersebut otomatis hilang seutuhnya**.
+  - Pada `admin_rbac.php`, tambahkan hak kelola untuk role `super_admin` agar Super Admin klub dapat secara leluasa merapikan headernya sendiri dengan mematikan menu yang jarang dipakai.
+- **Desain Header Modern, Lapang, & Sangat Nyaman (Anti-Menumpuk)**:
+  - Mengganti 15 deretan link teks horizontal yang menumpuk & berdesakan dengan arsitektur navigasi cerdas:
+    1. **Logo & Nama Klub**: Bersih, proporsional, dan elegan di kiri.
+    2. **Child Switcher (Untuk Akun Ortu/Keluarga)**: Tampil rapi sebagai pill dropdown ramping dengan indikator target panah.
+    3. **Menu Utama Cepat**: Tautan langsung ke `📊 Portal Scoring` & `🌐 Web Publik`.
+    4. **Dropdown Ramping "📜 Laporan & Prestasi"**: Menampung `Rapot Sesi A4`, `Rekap Bulanan`, dan `Medsos Share Card` (hanya tampil jika minimal 1 submenu aktif).
+    5. **Dropdown Ramping "⚙️ Manajemen Klub"** (Untuk Admin/Pelatih): Menampung `Web CMS`, `Hak Akses RBAC`, `Master Jarak`, `ACC Ujian`, `Pengaturan Klub`, `Dashboard Pelatih` (hanya tampil jika minimal 1 submenu aktif).
+    6. **Dropdown Ramping "👑 SaaS Platform"** (Khusus Master Admin): Menampung `Master Tenant`, `Tagihan SaaS`, dan `Marketing SaaS`.
+    7. **Profil & Kontrol di Kanan**:
+       - Badge Role Pengguna berdesain pill premium.
+       - Tombol Cepat Tema ☀️/🌙 (dengan tooltip dan animasi halus).
+       - Tombol Keluar (Logout) 🚪 dengan warna merah lembut.
+  - **Kenyamanan Spacing & Tipografi**:
+    - Padding dan margin yang lapang, tinggi navbar konsisten 54px, zero horizontal text overflow di semua ukuran resolusi layar (laptop 1366px, monitor besar, tablet, maupun HP).
+
 ---
 
 ## 🏆 STATUS EKSEKUSI & DEPLOYMENT
-- **Poin 1 s/d 27 & 29**: 100% Selesai & Berfungsi Sempurna.
-- **Poin 28 (Standarisasi Total `codika.my.id`)**: Siap dieksekusi setelah konfirmasi pengguna.
+- **Poin 1 s/d 29**: 100% Selesai & Berfungsi Sempurna di Level 1 Subdomain `*.codika.my.id`.
+- **Poin 30 & 31**: Menunggu konfirmasi pengguna untuk eksekusi terpadu.
 
 

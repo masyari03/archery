@@ -77,56 +77,47 @@ foreach ($allShots as $shot) {
         'is_x' => (int)$shot['is_x']
     ];
 }
+$pageTitle = "Papan Bidik Target - TARGET ARCHERY";
+require_once __DIR__ . '/views/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Papan Bidik Target - TARGET ARCHERY</title>
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
-    <style>
+<style>
+    .plotter-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+    @media (max-width: 900px) {
         .plotter-grid {
-            display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
-            gap: 1.5rem;
-            align-items: start;
+            grid-template-columns: 1fr;
         }
-        @media (max-width: 900px) {
-            .plotter-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        .ends-pill-bar {
-            display: flex;
-            gap: 0.5rem;
-            overflow-x: auto;
-            padding-bottom: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        .end-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-            padding: 0.5rem 1rem;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            font-family: 'Outfit', sans-serif;
-            font-weight: 700;
-            white-space: nowrap;
-            transition: all 0.2s;
-        }
-        .end-btn.active {
-            background: var(--primary);
-            color: #000;
-            border-color: var(--primary);
-            box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
-        }
-    </style>
-</head>
-<body>
-
-<?php include __DIR__ . '/views/navbar.php'; ?>
+    }
+    .ends-pill-bar {
+        display: flex;
+        gap: 0.5rem;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .end-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        white-space: nowrap;
+        transition: all 0.2s;
+    }
+    .end-btn.active {
+        background: var(--primary);
+        color: #000;
+        border-color: var(--primary);
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+    }
+</style>
 
 <main class="container">
     <!-- SESI INFO BAR -->

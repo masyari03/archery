@@ -91,7 +91,7 @@ $stmtNextDist->execute([':dm' => $currentDist, ':cid' => $currentArcher['club_id
 $nextDistRule = $stmtNextDist->fetch();
 
 $pageTitle = "Portal Scoring Atlet - " . htmlspecialchars($currentArcher['full_name']);
-require_once __DIR__ . '/views/navbar.php';
+require_once __DIR__ . '/views/header.php';
 ?>
 
 <div class="container pb-5">

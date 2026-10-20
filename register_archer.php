@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $primaryColor = $currentTenant['primary_color'] ?? '#0284c7';
 ?>
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="dark" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -93,6 +93,7 @@ $primaryColor = $currentTenant['primary_color'] ?? '#0284c7';
         (function() {
             const savedTheme = localStorage.getItem('archery_theme') || 'dark';
             document.documentElement.setAttribute('data-theme', savedTheme);
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
         })();
     </script>
 

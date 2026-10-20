@@ -56,7 +56,7 @@ $stmtMkt = $pdo->query("SELECT * FROM archery_saas_marketing_cms WHERE id = 1 LI
 $mkt = $stmtMkt->fetch() ?: [];
 
 $pageTitle = "Kelola Marketing SaaS & SEO Platform";
-require_once __DIR__ . '/views/navbar.php';
+require_once __DIR__ . '/views/header.php';
 ?>
 
 <div class="container pb-5">

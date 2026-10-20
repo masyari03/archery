@@ -163,70 +163,61 @@ $club = $stmtClub->fetch();
 if (!$club) {
     die("Klub tidak ditemukan.");
 }
+$pageTitle = "Pengaturan Klub & Sistem - TARGET ARCHERY";
+require_once __DIR__ . '/views/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pengaturan Klub & Sistem - TARGET ARCHERY</title>
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
-    <style>
-        .settings-tab-nav {
-            display: flex;
-            gap: 0.5rem;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 1.5rem;
-            overflow-x: auto;
-        }
-        .tab-btn {
-            background: none;
-            border: none;
-            border-bottom: 2px solid transparent;
-            color: var(--text-muted);
-            padding: 0.75rem 1.25rem;
-            font-size: 0.95rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
-        .tab-btn.active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-        }
-        .color-palette-picker {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-            flex-wrap: wrap;
-        }
-        .palette-chip {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 2px solid #ffffff;
-            transition: transform 0.2s;
-        }
-        .palette-chip:hover {
-            transform: scale(1.15);
-        }
-        .variable-badge {
-            background: rgba(2, 132, 199, 0.15);
-            border: 1px solid var(--primary);
-            color: var(--primary);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            cursor: pointer;
-            font-family: monospace;
-        }
-    </style>
-</head>
-<body>
-
-<?php include __DIR__ . '/views/navbar.php'; ?>
+<style>
+    .settings-tab-nav {
+        display: flex;
+        gap: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 1.5rem;
+        overflow-x: auto;
+    }
+    .tab-btn {
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--text-muted);
+        padding: 0.75rem 1.25rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+    .tab-btn.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+    .color-palette-picker {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .palette-chip {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid #ffffff;
+        transition: transform 0.2s;
+    }
+    .palette-chip:hover {
+        transform: scale(1.15);
+    }
+    .variable-badge {
+        background: rgba(2, 132, 199, 0.15);
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        font-family: monospace;
+    }
+</style>
 
 <main class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">

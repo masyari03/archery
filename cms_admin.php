@@ -258,7 +258,7 @@ $stmtRegs->execute([':cid' => $clubId]);
 $registrations = $stmtRegs->fetchAll();
 
 $pageTitle = "Manajemen Web CMS - " . htmlspecialchars($club['club_name'] ?? 'Klub');
-require_once __DIR__ . '/views/navbar.php';
+require_once __DIR__ . '/views/header.php';
 ?>
 
 <div class="container pb-5">

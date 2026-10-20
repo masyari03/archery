@@ -30,11 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ON DUPLICATE KEY UPDATE `is_visible` = :vis2
         ");
 
-        $managedRoles = ['coach', 'parent', 'archer'];
+        $managedRoles = ['super_admin', 'coach', 'parent', 'archer'];
         foreach ($managedRoles as $r) {
             foreach (RBAC::MENUS as $mKey => $mInfo) {
-                // Jangan nonaktifkan menu khusus admin untuk role selain admin
-                if (in_array($mKey, ['cms_admin', 'settings', 'distances', 'approvals', 'rbac']) && $r !== 'super_admin') {
+                // Menu rbac untuk super_admin wajib selalu aktif agar tidak terkunci
+                if ($mKey === 'rbac' && $r === 'super_admin') {
+                    $isVisible = 1;
+                } elseif (in_array($mKey, ['cms_admin', 'settings', 'distances', 'approvals', 'rbac']) && $r !== 'super_admin') {
                     $isVisible = 0; // Role non-admin dilarang mengakses menu pengaturan sistem
                 } else {
                     $isVisible = isset($permissions[$r][$mKey]) ? 1 : 0;
@@ -50,11 +52,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $alertMsg = 'Hak akses menu header berhasil disimpan! Tampilan navbar langsung disesuaikan dengan aturan ini.';
+        $alertMsg = 'Hak akses menu header berhasil disimpan! Menu yang dinonaktifkan langsung hilang dari header.';
     }
 
     if ($action === 'reset_default') {
         $roleDefaults = [
+            'super_admin' => array_keys(RBAC::MENUS),
             'coach'       => ['scoring', 'web_profil', 'rapot', 'rekap', 'medsos', 'coach_dashboard'],
             'parent'      => ['scoring', 'web_profil', 'rapot', 'rekap', 'medsos', 'bills'],
             'archer'      => ['scoring', 'web_profil']
@@ -80,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $matrix = RBAC::getClubMatrix($clubId, $pdo);
 
 $pageTitle = "Hak Akses Menu Header (RBAC) - " . htmlspecialchars($club['club_name'] ?? 'Klub');
-require_once __DIR__ . '/views/navbar.php';
+require_once __DIR__ . '/views/header.php';
 ?>
 
 <div class="container pb-5">
@@ -193,9 +196,15 @@ require_once __DIR__ . '/views/navbar.php';
                                     <?php endif; ?>
                                 </td>
 
-                                <!-- Super Admin Always Checked -->
+                                <!-- Super Admin Checkbox -->
                                 <td class="text-center">
-                                    <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Selalu Aktif</span>
+                                    <?php if ($mKey === 'rbac'): ?>
+                                        <span class="badge bg-success" title="Menu RBAC wajib aktif agar Super Admin tidak terkunci"><i class="bi bi-shield-check"></i> Wajib Aktif</span>
+                                    <?php else: ?>
+                                        <div class="form-check form-switch d-flex justify-content-center">
+                                            <input class="form-check-input" type="checkbox" name="perm[super_admin][<?= $mKey ?>]" value="1" <?= (!isset($matrix['super_admin'][$mKey]) || !empty($matrix['super_admin'][$mKey])) ? 'checked' : '' ?>>
+                                        </div>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

@@ -171,18 +171,9 @@ $allClubs = $stmtClubs->fetchAll();
 $totalTenants = count($allClubs);
 $totalAthletesGlobal = array_sum(array_column($allClubs, 'total_archers'));
 $activeTenants = count(array_filter($allClubs, fn($c) => $c['subscription_status'] === 'active'));
+$pageTitle = "Portal Master Admin (SaaS Tenant) - TARGET ARCHERY";
+require_once __DIR__ . '/views/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Portal Master Admin (SaaS Tenant) - TARGET ARCHERY</title>
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
-</head>
-<body>
-
-<?php include __DIR__ . '/views/navbar.php'; ?>
 
 <main class="container">
     <!-- HEADER BAR -->

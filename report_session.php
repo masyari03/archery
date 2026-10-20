@@ -51,19 +51,10 @@ $shotsByEnd = [];
 foreach ($allShots as $shot) {
     $shotsByEnd[$shot['end_id']][] = $shot;
 }
+$pageTitle = "Rapot Sesi Latihan - " . htmlspecialchars($session['archer_name']);
+require_once __DIR__ . '/views/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rapot Sesi Latihan - <?= htmlspecialchars($session['archer_name']) ?></title>
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
-    <link rel="stylesheet" href="assets/css/print_report.css">
-</head>
-<body style="background: #0f172a;">
-
-<?php include __DIR__ . '/views/navbar.php'; ?>
+<link rel="stylesheet" href="assets/css/print_report.css">
 
 <!-- TOOLBAR ACTION (TIDAK TERCETAK SAAT PRINT) -->
 <div class="no-print" style="max-width: 820px; margin: 1.5rem auto 0; display: flex; justify-content: space-between; align-items: center; padding: 0 1rem;">
