@@ -379,11 +379,82 @@
     - *30 Hari (Perangkat Pribadi)*
   - Sistem mengadopsi durasi tersebut untuk menghitung waktu kadaluarsa cookie login pengguna di klub tersebut.
 
+### 49. 👑 Gerbang Otentikasi Master Admin dengan Google Sign-In & Google Authenticator 2FA (TOTP) (`master_gate_auth.php`)
+- **Login Lewat Google (Google Sign-In / GSI)**:
+  - Tombol resmi "Masuk dengan Google" (*Sign in with Google*) terpasang di `master_gate_auth.php`.
+  - Menggunakan Google Identity Services SDK dengan verifikasi token server-side.
+  - Memeriksa apakah email akun Google yang masuk terdaftar sebagai `master_admin` di sistem (`archery_users` dengan role `master_admin`).
+  - Jika email Google bukan milik Master Admin (misal akun Gmail umum atau akun atlet), akses ditolak 100%.
+- **Two-Factor Authentication (TOTP / Google Authenticator)**:
+  - Dukungan kode otentikasi 6-digit standar RFC 6238 yang kompatibel dengan aplikasi Google Authenticator, Microsoft Authenticator, dan Authy.
+  - Sistem menyediakan:
+    1. Secret Key TOTP & Tautan QR Code untuk pemindaian pertama kali di aplikasi Google Authenticator.
+    2. Verifikasi kode dinamis 6-digit saat login (dengan toleransi time drift ±30 detik).
+    3. Master Emergency PIN / Backup Code sebagai alternatif darurat jika HP Master Admin tertinggal.
+- **Strict Role Isolation**:
+  - Gerbang `master_gate_auth.php` tetap 100% menolak akun umum (`super_admin`, `coach`, `parent`, `archer`).
+
+### 50. 📖 Buku Panduan Step-by-Step Cara Login Master Admin & Rincian Lengkap Akun Dummy Sistem
+- **Step-by-Step Akses Master Admin**:
+  - Menjelaskan langkah terperinci: dari membuka URL rahasia, memilih metode login (Username/Password atau Google), verifikasi kode 2FA Authenticator, hingga masuk ke dashboard manajemen SaaS platform.
+- **Rincian Akun Dummy yang Sudah Pernah Dibuat di Sistem**:
+  - Menyajikan tabel komprehensif seluruh akun dummy aktif:
+    1. `masteradmin` (Master Admin Platform Owner)
+    2. `superadmin` (Super Admin An-Nahl Archery)
+    3. `coach_fadli` (Pelatih An-Nahl Archery)
+    4. `ortu_budi` (Wali Murid An-Nahl Archery) beserta 3 Atlet anak: Ahmad (PIN `111111`), Fatimah (PIN `222222`), Zaidan (PIN `333333`).
+    5. `admin_focus` (Super Admin Focus Archery).
+
+### 51. 🎯 Pemisahan Total Sandbox Demo (`demo`) & Tenant Klien Asli (`annahl`, `focus`) + 1-Click Instant Demo Login
+- **Akar Masalah Pengguna**:
+  - Di `saas_marketing.php`, sebelumnya kredensial demo menampilkan teks password yang keliru (`password` alih-alih `admin123`) dan mengarahkan ke akun An-Nahl (`coach_fadli` & `ortu_budi`), sehingga terjadi kegagalan login dan bercampur dengan tenant klub nyata.
+- **Rencana Perbaikan Presisi**:
+  1. Buat **Tenant Khusus Sandbox Demo (Club ID: 3)**:
+     - Nama Klub: `DEMO ARCHERY CLUB` (`subdomain_slug = 'demo'`).
+     - Akun khusus demo:
+       - `demo_admin` (Super Admin Sandbox Demo) | Password: `demo123`
+       - `demo_coach` (Pelatih Sandbox Demo) | Password: `demo123`
+       - `demo_parent` (Orang Tua Sandbox Demo) | Password: `demo123`
+       - Atlet Demo: `Bintang Panahan Demo` | PIN: `1234`
+  2. Perbarui Kartu Demo di `saas_marketing.php`:
+     - Tampilkan kredensial pure demo: `demo_admin`, `demo_coach`, `demo_parent` dengan password `demo123`.
+     - Sediakan tombol **1-Click Auto Login** langsung ke `login.php?club=demo` sehingga pengunjung calon pembeli SaaS bisa langsung masuk tanpa perlu mengetik manual.
+  3. Klub An-Nahl Archery (`annahl`) dan Focus Archery (`focus`) kini 100% murni sebagai data tenant klien resmi yang terpisah dan bersih dari demo umum.
+
+### 52. 🎨 Standardisasi Header Lapang & Gagah Formulir Pendaftaran Atlet (`register_archer.php`) Mengikuti Web Profil (Gambar 1 vs Gambar 2)
+- **Akar Masalah Pengguna**:
+  - Pada Gambar 1 (`index.php`), header sangat nyaman, gagah, dan lapang dengan `tenant-top-bar` (kota, kontak WhatsApp, badge Official Club Website, jam buka) serta logo dan nama klub proporsional (`section-container 1560px`).
+  - Pada Gambar 2 (`register_archer.php`), logo mengecil (`36px`), tanpa top bar, container sempit (`1320px`), sehingga branding klub terlihat menyusut.
+- **Rencana Perbaikan Presisi**:
+  1. Tambahkan `tenant-top-bar` identik dengan Gambar 1 di atas halaman `register_archer.php`.
+  2. Perbarui `<header>` dengan kelas `nav-cms-header` dan `section-container` (max-width 1560px).
+  3. Gunakan ukuran logo `clamp(30px, 4vw, 42px)` dan nama klub `<h5 class="fw-bold brand-font">` yang lapang dan gagah.
+  4. Sediakan tombol toggle tema ☀️/🌙 serta tombol navigasi "Kembali ke Beranda" yang selaras dengan tema klub.
+
+### 53. 📱 Perbaikan Tampilan HP Mobile (375px iPhone SE) & Anti-Overflow Badges Kartu Program (`index.php`) (Gambar 3)
+- **Akar Masalah Pengguna**:
+  - Pada layar HP 375px, baris badge `[DEWASA / MAHASISWA / ORTU]` dan `[🛡️ BUSUR DIPINJAMKAN]` menggunakan `d-flex justify-content-between` tanpa `flex-wrap`, sehingga teks "Busur Dipinjamkan" terdorong menabrak dan keluar dari batas kartu putih kanan.
+- **Rencana Perbaikan Presisi**:
+  1. Ganti wrapper badge menjadi: `<div class="d-flex flex-wrap align-items-center gap-1 mb-2">`.
+  2. Atur ukuran font badge menjadi `font-size: 0.72rem;` dengan padding kompak `py-1 px-2` sehingga badge "Busur Dipinjamkan" otomatis turun rapi ke bawah badge kategori tanpa pernah keluar batas (*zero horizontal overflow*).
+  3. Lakukan audit menyeluruh pada seluruh kartu di `index.php` (kartu jadwal, kartu coach, dalil hadits) agar aman di viewport 375px.
+
+### 54. 🚀 Perbaikan Tampilan HP Mobile Hero SaaS Marketing & Teks Platform Terpotong (`saas_marketing.php`) (Gambar 4)
+- **Akar Masalah Pengguna**:
+  - Pada layar HP 375px, badge hero `[ ✦ PLATFORM DIGITALISASI OLAHRAGA SUNNAH & PRESTASI WORLD ARCHERY ]` terpotong di tepi kanan karena kelas `.badge` bawaan Bootstrap menggunakan `white-space: nowrap;`.
+  - Judul `saas-hero-title` memiliki ukuran minimum `2.1rem` (terlalu besar untuk layar 375px), dan tombol CTA utama terlalu lebar tanpa fluid scaling.
+- **Rencana Perbaikan Presisi**:
+  1. Pada CSS `.badge` di `saas_marketing.php`, tambahkan aturan: `white-space: normal !important; text-align: left; display: inline-block; max-width: 100%; font-size: clamp(0.72rem, 2.5vw, 0.82rem); line-height: 1.4;`.
+  2. Sesuaikan ukuran font hero title menjadi `font-size: clamp(1.45rem, 5vw, 3.25rem);` agar kata-kata panjang tidak memicu scroll horizontal atau terpotong.
+  3. Tambahkan responsivitas tombol CTA: pada viewport `< 576px`, tombol menjadi lebar 100% dengan padding proporsional.
+  4. Rampingkan header tombol "Hubungi Master Admin" di mobile agar rapi bersanding dengan logo platform.
+
 ---
 
 ## 🏆 STATUS EKSEKUSI & DEPLOYMENT
 - **Poin 1 s/d 48**: 100% Selesai, Teruji, dan Aktif di Server & Cloudflare (Domain `archery.codika.my.id`).
-- **Tahap Eksekusi (Tahap 2) & Dokumentasi Manual (Tahap 3)**: SELESAI SEMPURNA.
+- **Poin 49 s/d 54 (Edisi Baru)**: Siap Dieksekusi Menunggu Konfirmasi Pengguna.
+
 
 
 

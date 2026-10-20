@@ -106,17 +106,38 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
         .saas-hero {
             background: radial-gradient(circle at 80% 20%, rgba(2, 132, 199, 0.35) 0%, rgba(11, 15, 25, 0.98) 70%),
                         linear-gradient(180deg, #0b0f19 0%, #0f172a 100%);
-            padding: 100px 0 80px 0;
+            padding: clamp(60px, 8vw, 100px) 0 clamp(40px, 6vw, 80px) 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             position: relative;
             overflow: hidden;
         }
         .saas-hero-title {
-            font-size: clamp(2.1rem, 3.2vw, 3.25rem);
+            font-size: clamp(1.45rem, 5vw, 3.25rem);
             font-weight: 800;
-            line-height: 1.2;
+            line-height: 1.25;
             letter-spacing: -0.025em;
             max-width: 820px;
+            word-break: break-word;
+        }
+        .hero-badge-pill {
+            white-space: normal !important;
+            text-align: left;
+            display: inline-block;
+            max-width: 100%;
+            word-break: break-word;
+            line-height: 1.45;
+            font-size: clamp(0.72rem, 2.5vw, 0.85rem);
+        }
+        @media (max-width: 576px) {
+            .btn-lg {
+                font-size: 0.92rem !important;
+                padding: 0.75rem 1rem !important;
+                width: 100% !important;
+            }
+            .saas-header .btn {
+                padding: 4px 8px !important;
+                font-size: 0.75rem !important;
+            }
         }
         .feature-box {
             background: var(--bg-card);
@@ -197,7 +218,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
                     🌙
                 </button>
                 <a href="https://wa.me/<?= $cleanMasterWa ?>?text=Halo%20Master%20Admin%20Target%20Archery,%20saya%20tertarik%20mendaftarkan%20klub%20panahan%20saya%20ke%20platform%20SaaS%20ini" target="_blank" class="btn btn-warning btn-sm fw-bold text-dark px-3 shadow-sm">
-                    <i class="bi bi-whatsapp"></i> Hubungi Master Admin
+                    <i class="bi bi-whatsapp"></i> <span class="d-none d-sm-inline">Hubungi Master Admin</span><span class="d-inline d-sm-none">Admin</span>
                 </a>
             </div>
         </div>
@@ -208,14 +229,14 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
         <div class="container-fluid px-3 px-lg-5 section-container position-relative">
             <div class="row align-items-center g-5">
                 <div class="col-lg-7">
-                    <div class="badge bg-primary bg-opacity-25 text-info border border-info border-opacity-25 px-3 py-2 rounded-pill mb-3">
+                    <div class="badge hero-badge-pill bg-primary bg-opacity-25 text-info border border-info border-opacity-25 px-3 py-2 rounded-pill mb-3">
                         <i class="bi bi-stars"></i> <?= htmlspecialchars($heroBadge) ?>
                     </div>
                     <h1 class="saas-hero-title text-white mb-3">
                         Platform Manajemen &amp; Scoring Panahan<br class="d-none d-md-inline">
                         <span class="text-info">Multi-Club Berstandar Resmi #1</span>
                     </h1>
-                    <p class="lead text-muted mb-4" style="font-size: 1.15rem; max-width: 680px;">
+                    <p class="lead text-muted mb-4" style="font-size: clamp(0.95rem, 2vw, 1.15rem); max-width: 680px; line-height: 1.6;">
                         <?= htmlspecialchars($heroSubtitle) ?>
                     </p>
 
@@ -228,7 +249,7 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
                         </a>
                     </div>
 
-                    <div class="d-flex flex-wrap gap-4 text-muted small justify-content-center justify-content-lg-start">
+                    <div class="d-flex flex-wrap gap-3 gap-md-4 text-muted small justify-content-center justify-content-lg-start">
                         <span><i class="bi bi-check-circle-fill text-success"></i> Standar World Archery 10-Ring</span>
                         <span><i class="bi bi-check-circle-fill text-success"></i> Triple-Shield Anti-Hilang Skor</span>
                         <span><i class="bi bi-check-circle-fill text-success"></i> Domain &amp; Subdomain Sendiri</span>
@@ -242,38 +263,51 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
                                 🏹
                             </div>
                             <div>
-                                <h6 class="fw-bold mb-0 text-white">Interactive Live Demo</h6>
+                                <h6 class="fw-bold mb-0 text-white">Interactive Sandbox Demo</h6>
                                 <span class="text-muted small">Coba langsung sistem scoring tanpa registrasi</span>
                             </div>
                         </div>
 
                         <div class="mb-3 p-3 rounded" style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-color);">
                             <div class="d-flex align-items-center gap-2 mb-2 text-warning small fw-bold">
-                                <i class="bi bi-key-fill"></i> AKUN UJI COBA LANGSUNG (INSTANT LOGIN)
+                                <i class="bi bi-shield-lock-fill"></i> PURE DEMO ARCHERY CLUB (SANDBOX)
                             </div>
-                            <div class="d-flex flex-column gap-2 small">
+                            <div class="d-flex flex-column gap-2 small mb-3">
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary border-opacity-25">
-                                    <span class="text-light"><i class="bi bi-person-badge-fill text-info me-1"></i> Pelatih / Coach:</span>
-                                    <code class="text-warning">coach_fadli</code>
+                                    <span class="text-light"><i class="bi bi-person-badge-fill text-warning me-1"></i> Pelatih Demo:</span>
+                                    <code class="text-warning">demo_coach</code>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary border-opacity-25">
-                                    <span class="text-light"><i class="bi bi-people-fill text-success me-1"></i> Orang Tua Atlet:</span>
-                                    <code class="text-warning">ortu_budi</code>
+                                    <span class="text-light"><i class="bi bi-shield-check text-info me-1"></i> Admin Demo:</span>
+                                    <code class="text-info">demo_admin</code>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary border-opacity-25">
+                                    <span class="text-light"><i class="bi bi-people-fill text-success me-1"></i> Orang Tua Demo:</span>
+                                    <code class="text-success">demo_parent</code>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-1">
-                                    <span class="text-muted"><i class="bi bi-lock-fill me-1"></i> Password Demo:</span>
-                                    <code class="text-light">password</code>
+                                    <span class="text-muted"><i class="bi bi-key-fill me-1"></i> Password Demo:</span>
+                                    <code class="text-light">demo123</code>
                                 </div>
+                            </div>
+
+                            <!-- 1-Click Launch Buttons -->
+                            <div class="d-flex flex-column gap-2">
+                                <a href="login.php?club=demo&auto=coach" class="btn btn-warning btn-sm fw-bold text-dark py-2 d-flex align-items-center justify-content-center gap-2 shadow-sm">
+                                    <i class="bi bi-person-badge-fill"></i> 1-Klik Masuk sbg Pelatih Demo
+                                </a>
+                                <a href="login.php?club=demo&auto=admin" class="btn btn-outline-info btn-sm py-1 d-flex align-items-center justify-content-center gap-2">
+                                    <i class="bi bi-shield-lock"></i> 1-Klik Masuk sbg Admin Demo
+                                </a>
+                                <a href="login.php?club=demo&auto=parent" class="btn btn-outline-light btn-sm py-1 d-flex align-items-center justify-content-center gap-2">
+                                    <i class="bi bi-people"></i> 1-Klik Masuk sbg Ortu Demo
+                                </a>
                             </div>
                         </div>
 
-                        <p class="text-muted small mb-3">
-                            Jelajahi fitur Target Plotter 10-Ring, kalkulasi arrow radius milimeter, rapor PDF A4 resmi, dan portal latihan secara instan.
+                        <p class="text-muted small mb-0">
+                            Jelajahi fitur Target Plotter 10-Ring, kalkulasi arrow radius milimeter, rapor PDF A4 resmi, dan portal latihan secara instan tanpa perlu registrasi.
                         </p>
-
-                        <a href="login.php" class="btn btn-primary w-100 fw-bold py-2 shadow-sm d-flex align-items-center justify-content-center gap-2">
-                            <i class="bi bi-play-circle-fill fs-5"></i> Buka Demo Sistem Sekarang
-                        </a>
                     </div>
                 </div>
             </div>

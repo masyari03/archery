@@ -62,7 +62,7 @@ try {
     addColumnIfNotExists($pdo, 'archery_clubs', 'favicon_url', "VARCHAR(255) DEFAULT 'assets/img/default_favicon.png'");
     echo "✔ Tabel `archery_clubs` siap dengan kolom modern & SaaS Domain Resolver.\n";
 
-    // 3. Tabel archery_users (Update ENUM role with master_admin)
+    // 3. Tabel archery_users (Update ENUM role with master_admin & 2FA Google TOTP)
     $pdo->exec("
     CREATE TABLE IF NOT EXISTS `archery_users` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -80,7 +80,10 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ");
     $pdo->exec("ALTER TABLE `archery_users` MODIFY COLUMN `role` ENUM('master_admin', 'super_admin', 'coach', 'parent', 'archer') NOT NULL DEFAULT 'parent';");
-    echo "✔ Tabel `archery_users` siap dengan role `master_admin`.\n";
+    addColumnIfNotExists($pdo, 'archery_users', 'totp_secret', "VARCHAR(64) DEFAULT NULL");
+    addColumnIfNotExists($pdo, 'archery_users', 'emergency_pin', "VARCHAR(30) DEFAULT '998877'");
+    addColumnIfNotExists($pdo, 'archery_users', 'google_id', "VARCHAR(100) DEFAULT NULL");
+    echo "✔ Tabel `archery_users` siap dengan role `master_admin`, Google ID, & 2FA TOTP.\n";
 
     // 3b. Tabel archery_saas_invoices (Tagihan Sewa SaaS Klub ke Master Admin)
     $pdo->exec("
@@ -499,11 +502,12 @@ try {
     (`id`, `club_name`, `club_code`, `subdomain_slug`, `custom_domain`, `city`, `address`, `phone`, `admin_wa_phone`, `chairman_name`, `primary_color`, `theme_mode`, `fonnte_token`, `fonnte_enabled`, `wa_payment_template`, `wa_promotion_template`, `pricing_scheme`, `monthly_flat_fee`, `fee_per_archer`, `cutoff_day`, `subscription_status`, `subscription_expires_at`)
     VALUES 
     (1, 'AN-NAHL ARCHERY CLUB', 'ANNAHL-ARC', 'annahl', NULL, 'Bogor', 'Jl. Ciangsana Raya No. 1, Gunung Putri, Bogor', '081299887766', '081299887766', 'Ustadz Asy\'ari, S.Pd.', '#0284c7', 'dark', '', 1, ?, ?, 'flat_monthly', 150000.00, 10000.00, 16, 'active', '2026-12-31'),
-    (2, 'FOCUS ARCHERY CLUB', 'FOCUS-ARC', 'focus', NULL, 'Bandung', 'Jl. Sukajadi No. 45, Bandung', '081377889900', '081377889900', 'Coach Hendra, S.Or.', '#10b981', 'dark', '', 0, ?, ?, 'per_archer', 150000.00, 10000.00, 16, 'active', '2026-11-15')
+    (2, 'FOCUS ARCHERY CLUB', 'FOCUS-ARC', 'focus', NULL, 'Bandung', 'Jl. Sukajadi No. 45, Bandung', '081377889900', '081377889900', 'Coach Hendra, S.Or.', '#10b981', 'dark', '', 0, ?, ?, 'per_archer', 150000.00, 10000.00, 16, 'active', '2026-11-15'),
+    (3, 'DEMO ARCHERY CLUB', 'DEMO-ARC', 'demo', NULL, 'Jakarta Sandbox', 'Gelanggang Simulasi & Demo Target Archery Indonesia', '081299887766', '081299887766', 'Coach Demo Official', '#f59e0b', 'dark', '', 0, ?, ?, 'flat_monthly', 0.00, 0.00, 16, 'active', '2029-12-31')
     ON DUPLICATE KEY UPDATE `club_name`=VALUES(`club_name`), `subdomain_slug`=VALUES(`subdomain_slug`), `primary_color`=VALUES(`primary_color`), `admin_wa_phone`=VALUES(`admin_wa_phone`), `pricing_scheme`=VALUES(`pricing_scheme`);
     ");
-    $stmtClub->execute([$defaultPayTemplate, $defaultPromoTemplate, $defaultPayTemplate, $defaultPromoTemplate]);
-    echo "✔ Data Tenant Klub (An-Nahl & Focus Archery) terisi.\n";
+    $stmtClub->execute([$defaultPayTemplate, $defaultPromoTemplate, $defaultPayTemplate, $defaultPromoTemplate, $defaultPayTemplate, $defaultPromoTemplate]);
+    echo "✔ Data Tenant Klub (An-Nahl, Focus, & DEMO ARCHERY CLUB) terisi.\n";
 
     // Seed Web CMS Content
     $stmtCms = $pdo->prepare("
@@ -535,6 +539,19 @@ try {
      'https://instagram.com/focusarchery',
      NULL,
      NULL
+    ),
+    (3,
+     'Live Sandbox & Simulasi Interaktif Target Archery System',
+     'Eksplorasi seluruh fitur canggih aplikasi scoring panahan kami secara langsung tanpa risiko. Coba plotting milimeter, cetak rapor sesi, dan evaluasi kenaikan jarak.',
+     'Coba Live Demo Sekarang',
+     'Tentang Klub Simulasi & Demo',
+     'Tenant ini dibuat khusus untuk calon pengurus klub, pelatih, dan orang tua yang ingin menguji coba keandalan software Target Archery sebelum memutuskan bergabung.',
+     'Bebas Coba Fitur Plotting Milimeter 10-Ring,Simulasi Rapor Otomatis A4,Multi-Child Switcher Orang Tua,Uji Kenaikan Jarak & Jam Terbang,Integrasi Notifikasi WhatsApp',
+     'Kemudahan Digitalisasi Olahraga Panahan',
+     'Meninggalkan pencatatan manual di kertas dengan beralih ke analitik visual tembakan digital yang modern dan presisi.',
+     'https://instagram.com/codika.id',
+     NULL,
+     NULL
     )
     ON DUPLICATE KEY UPDATE `hero_headline`=VALUES(`hero_headline`), `about_title`=VALUES(`about_title`);
     ");
@@ -549,7 +566,8 @@ try {
     (1, 'Kelas Junior Foundation (Pemula)', 'Usia 6 - 12 Tahun', 'Standard Bow / Horsebow', 'Rp 250.000 / Bulan', '1x Sepekan (Sabtu/Ahad)', 'Pengenalan keselamatan memanah (safety rules), pembentukan form dasar, anchor point, dan konsistensi tembakan jarak 5m.', 1, 1),
     (1, 'Kelas Prestasi Junior (Intermediate)', 'Usia 10 - 17 Tahun', 'Standard Bow & Barebow', 'Rp 350.000 / Bulan', '2x Sepekan (Rabu & Sabtu)', 'Pengasahan konsistensi rilis, analisis grouping tembakan digital, persiapan seleksi POPDA & Kejurda, jarak 10m - 18m.', 1, 2),
     (1, 'Kelas Sunnah Dewasa & Eksekutif', 'Dewasa / Mahasiswa / Ortu', 'Barebow & Recurve', 'Rp 300.000 / Bulan', '1x Sepekan (Sabtu/Ahad Pagi)', 'Olahraga sunnah untuk kebugaran fisik, kestabilan mental, serta relaksasi stres akhir pekan bersama komunitas positif.', 1, 3),
-    (2, 'Focus Beginner Class', 'Anak & Remaja', 'Standard Bow', 'Rp 200.000 / Bulan', '4x Pertemuan', 'Dasar memanah yang menyenangkan dan terarah.', 1, 1)
+    (2, 'Focus Beginner Class', 'Anak & Remaja', 'Standard Bow', 'Rp 200.000 / Bulan', '4x Pertemuan', 'Dasar memanah yang menyenangkan dan terarah.', 1, 1),
+    (3, 'Demo Program Barebow Standar', 'Semua Usia / Pengunjung Demo', 'Barebow & Standard Bow', 'Gratis (Akun Sandbox)', 'Sesi Kapan Saja', 'Program contoh untuk melihat alur pendaftaran, kurikulum berjenjang, dan pencatatan scoring digital.', 1, 1)
     ON DUPLICATE KEY UPDATE `program_name`=VALUES(`program_name`);
     ");
     echo "✔ Program Kursus Web CMS terisi.\n";
@@ -562,7 +580,8 @@ try {
     (1, 'Sabtu Pagi', '08:00 - 10:00 WIB', 'Kelas Pemula & Junior (5m - 7m)', 'Lapangan Target Utama (Outdoor Range)', 'Coach Fadli & Coach Asisten', 1),
     (1, 'Sabtu Sore', '15:30 - 17:30 WIB', 'Kelas Prestasi & Ujian Scoring Jarak', 'Lapangan Presisi Line A (10m - 18m)', 'Coach Fadli Archery', 2),
     (1, 'Ahad Pagi', '08:00 - 10:30 WIB', 'Kelas Dewasa, Eksekutif & Sunnah Archery', 'Lapangan Target Line B', 'Coach Fadli & Ustadz Asy\'ari', 3),
-    (2, 'Ahad Pagi', '08:30 - 10:30 WIB', 'Regular Focus Session', 'Bandung Archery Range', 'Coach Hendra', 1)
+    (2, 'Ahad Pagi', '08:30 - 10:30 WIB', 'Regular Focus Session', 'Bandung Archery Range', 'Coach Hendra', 1),
+    (3, 'Setiap Hari', 'Buka 24 Jam', 'Simulasi Sesi Scoring Terbuka', 'Cloud Target Sandbox', 'Coach Demo', 1)
     ON DUPLICATE KEY UPDATE `session_type`=VALUES(`session_type`);
     ");
     echo "✔ Jadwal Latihan Web CMS terisi.\n";
@@ -590,7 +609,9 @@ try {
         [1, 30, 'Jarak 30 Meter (Outdoor Intermediate)', 30, 8, 280, 'Kompensasi windage outdoor dan setelan pisir'],
         [1, 50, 'Jarak 50 Meter (Outdoor Mahir / Compound)', 36, 12, 285, 'Jarak resmi outdoor divisi compound & barebow dewasa'],
         [2, 5, 'Jarak 5 Meter Pemula Focus', 8, 1, 240, 'Dasar form panahan'],
-        [2, 10, 'Jarak 10 Meter Junior Focus', 14, 2, 255, 'Konsistensi bidikan']
+        [2, 10, 'Jarak 10 Meter Junior Focus', 14, 2, 255, 'Konsistensi bidikan'],
+        [3, 5, 'Jarak 5 Meter Sandbox Demo', 5, 1, 200, 'Simulasi jarak dasar pemula'],
+        [3, 10, 'Jarak 10 Meter Sandbox Demo', 10, 2, 250, 'Simulasi kenaikan jarak']
     ];
     $stmtDist = $pdo->prepare("INSERT INTO `archery_distances` (`club_id`, `distance_meter`, `distance_label`, `min_sessions_required`, `min_months_required`, `min_passing_score`, `description`)
         VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `distance_label`=VALUES(`distance_label`), `min_passing_score`=VALUES(`min_passing_score`);");
@@ -626,27 +647,37 @@ try {
     $stmtSaas->execute([$defaultWaReminderTpl]);
     echo "✔ Pengaturan Master Admin SaaS terisi.\n";
 
-    // User Master Admin, Super Admin, Coach, Parent
+    // User Master Admin, Super Admin, Coach, Parent & PURE DEMO ACCOUNTS
     $passHash = password_hash('admin123', PASSWORD_BCRYPT);
+    $demoPassHash = password_hash('demo123', PASSWORD_BCRYPT);
     $users = [
         [1, 'masteradmin', $passHash, 'Master Admin (Platform Owner)', 'master_admin', '081299887766', 'master@archery.local'],
         [1, 'superadmin', $passHash, 'Super Admin (An-Nahl Archery)', 'super_admin', '081299990001', 'superadmin@annahl.local'],
         [1, 'coach_fadli', $passHash, 'Coach Fadli Archery', 'coach', '081299990002', 'coach@archery.local'],
         [1, 'ortu_budi', $passHash, 'Bapak Budi Santoso', 'parent', '081288889999', 'budi@gmail.com'],
-        [2, 'admin_focus', $passHash, 'Admin Focus Archery', 'super_admin', '081377889900', 'admin@focusarchery.local']
+        [2, 'admin_focus', $passHash, 'Admin Focus Archery', 'super_admin', '081377889900', 'admin@focusarchery.local'],
+        // PURE DEMO ACCOUNTS (CLUB 3)
+        [3, 'demo_admin', $demoPassHash, 'Super Admin Sandbox Demo', 'super_admin', '081299887766', 'demo_admin@codika.my.id'],
+        [3, 'demo_coach', $demoPassHash, 'Pelatih Lapangan Sandbox Demo', 'coach', '081299887766', 'demo_coach@codika.my.id'],
+        [3, 'demo_parent', $demoPassHash, 'Wali Santri Sandbox Demo', 'parent', '081299887766', 'demo_parent@codika.my.id']
     ];
     $stmtUser = $pdo->prepare("INSERT INTO `archery_users` (`club_id`, `username`, `password_hash`, `full_name`, `role`, `phone`, `email`)
         VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `full_name`=VALUES(`full_name`), `role`=VALUES(`role`), `club_id`=VALUES(`club_id`);");
     foreach ($users as $u) {
         $stmtUser->execute($u);
     }
-    echo "✔ User masteradmin, superadmin (An-Nahl), coach, parent, tenant admin terisi.\n";
+    echo "✔ User masteradmin, superadmin (An-Nahl), coach, parent, tenant admin, dan PURE DEMO ACCOUNTS terisi.\n";
 
-    // Atlet (Ahmad di 7m & Fatimah di 5m)
+    // Atlet (Ahmad di 7m & Fatimah di 5m) + Atlet Sandbox Demo
+    // Cari id demo_parent dan demo_coach
+    $demoParentId = $pdo->query("SELECT id FROM archery_users WHERE username = 'demo_parent' LIMIT 1")->fetchColumn() ?: 4;
+    $demoCoachId = $pdo->query("SELECT id FROM archery_users WHERE username = 'demo_coach' LIMIT 1")->fetchColumn() ?: 3;
+
     $archers = [
         [1, 4, 3, 'ARC-001', 'Muhammad Ahmad Santoso', 'Ahmad', 'L', '2012-05-14', '081288889999', '111111', 7, 1, 'Rekomendasi coach: Anchor sangat konsisten, diizinkan ujian naik jarak ke 10m.', 'Barebow', 20.0, 'Pemula Lanjutan (7m)', 285, 14, '2026-09-01'],
         [1, 4, 3, 'ARC-002', 'Fatimah Az-Zahra Santoso', 'Fatimah', 'P', '2014-08-20', '081288889999', '222222', 5, 0, NULL, 'Standard Bow', 16.0, 'Pemula (5m)', 260, 5, '2026-10-05'],
-        [1, 4, 3, 'ARC-003', 'Zaidan Al-Farisi (Atlet Baru Masuk Tgl 20)', 'Zaidan', 'L', '2013-02-10', '081288889999', '333333', 5, 0, NULL, 'Standard Bow', 14.0, 'Pemula (5m)', 180, 1, '2026-10-20']
+        [1, 4, 3, 'ARC-003', 'Zaidan Al-Farisi (Atlet Baru Masuk Tgl 20)', 'Zaidan', 'L', '2013-02-10', '081288889999', '333333', 5, 0, NULL, 'Standard Bow', 14.0, 'Pemula (5m)', 180, 1, '2026-10-20'],
+        [3, $demoParentId, $demoCoachId, 'DEMO-001', 'Bintang Panahan Demo', 'Bintang', 'L', '2014-01-01', '081299887766', '1234', 5, 1, 'Siap ujian kenaikan jarak simulasi.', 'Barebow', 18.0, 'Tingkat Pemula (5m)', 270, 8, '2026-10-01']
     ];
     $stmtArch = $pdo->prepare("INSERT INTO `archery_archers` 
         (`club_id`, `parent_user_id`, `assigned_coach_id`, `nis`, `full_name`, `nickname`, `gender`, `birth_date`, `parent_phone`, `access_pin`, `current_distance_meter`, `can_exam_promotion`, `coach_exam_notes`, `bow_category`, `draw_weight_lbs`, `current_level`, `personal_best_score`, `total_sessions_count`, `created_at`)
@@ -655,7 +686,7 @@ try {
     foreach ($archers as $a) {
         $stmtArch->execute($a);
     }
-    echo "✔ Atlet contoh terisi (termasuk atlet tgl 20 untuk uji coba aturan cut-off tgl 16).\n";
+    echo "✔ Atlet contoh An-Nahl & Atlet Sandbox Demo (PIN: 1234) terisi.\n";
 
     // Seed Invoice Tagihan SaaS
     $stmtInv = $pdo->prepare("
@@ -669,7 +700,7 @@ try {
     $stmtInv->execute();
     echo "✔ Contoh Invoice SaaS Master Admin terisi.\n";
 
-    // Seed Default RBAC Permissions (Super Admin, Coach, Parent, Archer) untuk Club 1 & 2
+    // Seed Default RBAC Permissions (Super Admin, Coach, Parent, Archer) untuk Club 1, 2, dan 3
     $defaultMenus = [
         'scoring' => 'Portal Scoring',
         'web_profil' => 'Lihat Web Publik',
@@ -698,7 +729,7 @@ try {
         ON DUPLICATE KEY UPDATE `is_visible`=VALUES(`is_visible`);
     ");
 
-    foreach ([1, 2] as $cId) {
+    foreach ([1, 2, 3] as $cId) {
         foreach (['super_admin', 'coach', 'parent', 'archer'] as $r) {
             $allowedList = $roleDefaults[$r] ?? [];
             foreach ($defaultMenus as $mKey => $mLabel) {
@@ -707,7 +738,7 @@ try {
             }
         }
     }
-    echo "✔ Default RBAC Permissions Header terisi untuk seluruh role.\n";
+    echo "✔ Default RBAC Permissions Header terisi untuk seluruh role (Club 1, 2, 3).\n";
 
     // Seed Konten Web Penjualan SaaS Master Admin
     $features = json_encode([

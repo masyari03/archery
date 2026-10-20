@@ -53,6 +53,52 @@ if (!Auth::check() && !empty($_COOKIE['archery_remember'])) {
     }
 }
 
+// 1-Click Instant Demo Login (HANYA untuk Tenant Sandbox Demo ID: 3)
+if ($tenantId === 3 && isset($_GET['auto']) && !Auth::check()) {
+    $autoRole = $_GET['auto'];
+    $demoUsername = match($autoRole) {
+        'coach' => 'demo_coach',
+        'admin' => 'demo_admin',
+        'parent' => 'demo_parent',
+        default => null
+    };
+
+    if ($demoUsername) {
+        $stmtAuto = $pdo->prepare("SELECT * FROM archery_users WHERE username = :u AND club_id = 3 AND is_active = 1 LIMIT 1");
+        $stmtAuto->execute([':u' => $demoUsername]);
+        $autoUser = $stmtAuto->fetch();
+        if ($autoUser) {
+            $_SESSION['user_id'] = $autoUser['id'];
+            $_SESSION['username'] = $autoUser['username'];
+            $_SESSION['full_name'] = $autoUser['full_name'];
+            $_SESSION['role'] = $autoUser['role'];
+            $_SESSION['phone'] = $autoUser['phone'];
+            $_SESSION['email'] = $autoUser['email'] ?? '';
+            $_SESSION['club_id'] = 3;
+            $_SESSION['avatar_url'] = $autoUser['avatar_url'] ?? null;
+            ActivityLogger::recordSession($pdo, (int)$autoUser['id'], $autoUser['username'], $autoUser['role'], 3);
+            ActivityLogger::log($pdo, 3, (int)$autoUser['id'], $autoUser['username'], $autoUser['role'], 'DEMO_LOGIN', "1-Click auto login sandbox demo sebagai {$autoRole}");
+
+            $redirectTarget = ($autoUser['role'] === 'coach') ? 'coach_dashboard.php' : (($autoUser['role'] === 'super_admin') ? 'cms_admin.php' : 'app_dashboard.php');
+            header("Location: {$redirectTarget}");
+            exit;
+        }
+    } elseif ($autoRole === 'pin') {
+        $stmtPin = $pdo->prepare("SELECT * FROM archery_archers WHERE access_pin = '1234' AND club_id = 3 LIMIT 1");
+        $stmtPin->execute();
+        $archer = $stmtPin->fetch();
+        if ($archer) {
+            $_SESSION['user_id'] = 0;
+            $_SESSION['archer_id'] = $archer['id'];
+            $_SESSION['full_name'] = $archer['full_name'];
+            $_SESSION['role'] = 'archer';
+            $_SESSION['club_id'] = 3;
+            header("Location: app_dashboard.php");
+            exit;
+        }
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $loginType = $_POST['login_type'] ?? 'user';
 
@@ -270,6 +316,31 @@ end_login_handler:
             <h1 style="font-size: 1.5rem; margin-bottom: 0.2rem;"><?= htmlspecialchars($clubName) ?></h1>
             <p style="color: var(--text-muted); font-size: 0.85rem;">Portal Skoring Panahan &amp; Monitoring Atlet</p>
         </div>
+
+        <?php if ($tenantId === 3): ?>
+            <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 1.25rem; text-align: left;">
+                <div style="font-weight: 700; color: #fbbf24; font-size: 0.8rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px;">
+                    <span>⚡</span> <span>AKUN SIMULASI DEMO 1-KLIK (SANDBOX)</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; font-size: 0.75rem;">
+                    <a href="login.php?club=demo&auto=coach" class="btn btn-warning btn-sm fw-bold text-dark text-nowrap" style="padding: 4px 8px; font-size: 0.72rem;">
+                        🏹 sbg Pelatih (Coach)
+                    </a>
+                    <a href="login.php?club=demo&auto=admin" class="btn btn-outline-info btn-sm fw-bold text-nowrap" style="padding: 4px 8px; font-size: 0.72rem;">
+                        🛡️ sbg Super Admin
+                    </a>
+                    <a href="login.php?club=demo&auto=parent" class="btn btn-outline-light btn-sm fw-bold text-nowrap" style="padding: 4px 8px; font-size: 0.72rem;">
+                        👨‍👩‍👧‍👦 sbg Wali / Ortu
+                    </a>
+                    <a href="login.php?club=demo&auto=pin" class="btn btn-outline-success btn-sm fw-bold text-nowrap" style="padding: 4px 8px; font-size: 0.72rem;">
+                        📱 PIN Anak (1234)
+                    </a>
+                </div>
+                <div style="margin-top: 0.5rem; font-size: 0.7rem; color: var(--text-dim);">
+                    *Atau login manual: username <code class="text-warning">demo_coach</code> / <code class="text-warning">demo_admin</code> / <code class="text-warning">demo_parent</code> & password <code class="text-light">demo123</code>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <!-- DUAL TABS: AKUN KELUARGA/COACH/ADMIN VS PERANGKAT LAPANGAN ATLET -->
         <div class="login-tabs">

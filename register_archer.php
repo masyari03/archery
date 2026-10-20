@@ -150,31 +150,78 @@ $primaryColor = $currentTenant['primary_color'] ?? '#0284c7';
             background: rgba(245, 158, 11, 0.12);
             box-shadow: 0 0 15px rgba(245, 158, 11, 0.25);
         }
+        .tenant-top-bar {
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 8px 0;
+            font-size: 13px;
+        }
+        .nav-cms-header {
+            background: rgba(11, 15, 25, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+        }
+        .section-container {
+            max-width: 1560px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
 
-    <!-- TOP HEADER -->
-    <header class="py-3 border-bottom" style="background: var(--bg-card); border-color: var(--border-color) !important;">
-        <div class="container d-flex justify-content-between align-items-center">
-            <a href="index.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="d-flex align-items-center gap-2 text-decoration-none">
-                <?php if (!empty($currentTenant['logo_url']) && file_exists(__DIR__ . '/' . $currentTenant['logo_url'])): ?>
-                    <img src="<?= htmlspecialchars($currentTenant['logo_url']) ?>" alt="Logo" style="height: 36px; max-width: 44px; object-fit: contain; border-radius: 6px;">
+    <!-- TOP BAR RESMI IDENTITAS KLUB (IDENTIK DENGAN GAMBAR 1 INDEX.PHP) -->
+    <div class="tenant-top-bar no-print">
+        <div class="container-fluid px-3 px-lg-5 section-container d-flex flex-wrap justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted"><i class="bi bi-geo-alt-fill text-danger"></i> <?= htmlspecialchars($currentTenant['city']) ?>, Indonesia</span>
+                <span class="text-muted d-none d-md-inline">&bull;</span>
+                <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $currentTenant['admin_wa_phone']) ?>?text=Halo%20Admin%20<?= urlencode($currentTenant['club_name']) ?>" target="_blank" class="text-muted text-decoration-none">
+                    <i class="bi bi-whatsapp text-success"></i> <?= htmlspecialchars($currentTenant['admin_wa_phone']) ?>
+                </a>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-primary bg-opacity-25 text-info border border-info border-opacity-25">
+                    <i class="bi bi-shield-check"></i> Official Club Website
+                </span>
+                <span class="text-muted small d-none d-sm-inline">
+                    <i class="bi bi-clock"></i> Layanan: Setiap Hari 07:00 - 18:00
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN NAVBAR WEB CMS (SPACIOUS, GAGAH & COMFORTABLE SESUAI GAMBAR 1) -->
+    <header class="nav-cms-header py-2">
+        <div class="container-fluid px-3 px-lg-5 section-container d-flex justify-content-between align-items-center">
+            <a href="index.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="d-flex align-items-center gap-2 text-decoration-none min-w-0">
+                <?php if (!empty($currentTenant['logo_url']) && $currentTenant['logo_url'] !== 'assets/img/default_logo.png' && file_exists(__DIR__ . '/' . $currentTenant['logo_url'])): ?>
+                    <img src="<?= htmlspecialchars($currentTenant['logo_url']) ?>" alt="Logo" style="height: clamp(30px, 4vw, 42px); max-width: clamp(38px, 5vw, 50px); object-fit: contain; border-radius: 8px;" loading="lazy">
                 <?php else: ?>
-                    <span class="fs-4">🎯</span>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style="width: clamp(32px, 4vw, 42px); height: clamp(32px, 4vw, 42px); background: var(--primary); font-size: clamp(14px, 2vw, 20px);">
+                        🎯
+                    </div>
                 <?php endif; ?>
-                <div>
-                    <h6 class="mb-0 fw-bold brand-font"><?= htmlspecialchars($currentTenant['club_name']) ?></h6>
-                    <span class="text-muted small" style="font-size: 11px;">Pendaftaran Calon Santri &bull; Atlet Panahan</span>
+                <div class="min-w-0">
+                    <h5 class="mb-0 fw-bold brand-font text-truncate" style="letter-spacing: -0.02em; font-size: clamp(0.85rem, 1.3vw, 1.15rem);"><?= htmlspecialchars($currentTenant['club_name']) ?></h5>
+                    <span class="text-muted small d-none d-sm-inline" style="font-size: clamp(10px, 0.8vw, 11px);">Official Archery Club &bull; Member Platform</span>
                 </div>
             </a>
-            <div class="d-flex align-items-center gap-2">
+
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
                 <!-- TOMBOL TOGGLE TEMA ☀️ / 🌙 -->
                 <button type="button" class="theme-toggle-btn me-1" onclick="toggleAppTheme()" title="Ganti Tema Terang/Gelap" id="themeToggleBtn">
                     🌙
                 </button>
-                <a href="index.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left"></i> Kembali ke Beranda
+                <a href="index.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="btn btn-outline-secondary btn-sm px-3 text-nowrap" style="font-size: clamp(0.75rem, 1vw, 0.85rem);">
+                    <i class="bi bi-arrow-left"></i> <span class="d-none d-sm-inline">Kembali ke Beranda</span><span class="d-inline d-sm-none">Beranda</span>
+                </a>
+                <a href="login.php?club=<?= urlencode($currentTenant['subdomain_slug']) ?>" class="btn btn-outline-light btn-sm px-3 text-nowrap" style="font-size: clamp(0.75rem, 1vw, 0.85rem);">
+                    <i class="bi bi-box-arrow-in-right"></i> Masuk
                 </a>
             </div>
         </div>

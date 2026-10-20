@@ -141,6 +141,15 @@ foreach ($schedules as $sch) {
         html {
             scroll-behavior: smooth;
         }
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+        }
+        .badge {
+            white-space: normal !important;
+            word-break: break-word;
+            line-height: 1.35;
+        }
         section[id] {
             scroll-margin-top: 85px;
         }
@@ -508,15 +517,15 @@ foreach ($schedules as $sch) {
                 <?php else: ?>
                     <?php foreach ($programs as $prog): ?>
                         <div class="col-md-4">
-                            <div class="program-card p-4">
+                            <div class="program-card p-3 p-sm-4">
                                 <div>
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <span class="badge bg-primary"><?= htmlspecialchars($prog['target_audience']) ?></span>
+                                    <div class="d-flex flex-wrap align-items-center gap-1 mb-2">
+                                        <span class="badge bg-primary py-1 px-2" style="font-size: 0.72rem; letter-spacing: 0.02em;"><?= htmlspecialchars($prog['target_audience']) ?></span>
                                         <?php if (!empty($prog['equipment_included'])): ?>
-                                            <span class="badge bg-success small"><i class="bi bi-shield-check"></i> Busur Dipinjamkan</span>
+                                            <span class="badge bg-success py-1 px-2" style="font-size: 0.72rem;"><i class="bi bi-shield-check"></i> Busur Dipinjamkan</span>
                                         <?php endif; ?>
                                     </div>
-                                    <h4 class="fw-bold text-white mt-2 mb-1"><?= htmlspecialchars($prog['program_name']) ?></h4>
+                                    <h4 class="fw-bold text-white mt-2 mb-1" style="font-size: clamp(1.1rem, 2vw, 1.35rem);"><?= htmlspecialchars($prog['program_name']) ?></h4>
                                     <div class="text-info small fw-bold mb-3">
                                         <i class="bi bi-lightning-charge"></i> <?= htmlspecialchars($prog['bow_type']) ?>
                                     </div>
@@ -558,9 +567,9 @@ foreach ($schedules as $sch) {
                         <?php else: ?>
                             <?php foreach ($schedules as $sch): ?>
                                 <div class="schedule-item-card">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-1">
                                         <h6 class="fw-bold text-white mb-0"><?= htmlspecialchars($sch['day_name']) ?></h6>
-                                        <span class="badge bg-warning text-dark"><?= htmlspecialchars($sch['time_range']) ?></span>
+                                        <span class="badge bg-warning text-dark py-1 px-2" style="font-size: 0.72rem;"><?= htmlspecialchars($sch['time_range']) ?></span>
                                     </div>
                                     <div class="text-info small fw-bold mb-1">
                                         <?= htmlspecialchars($sch['session_type']) ?>
