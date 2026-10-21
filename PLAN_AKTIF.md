@@ -579,9 +579,151 @@
 
 ---
 
+---
+
+### 66. 🪟 Standardisasi Seluruh Dialog Box / Modal Pop-up Terpusat (Anti Tulisan di Bawah) (`views/header.php`, `coach_dashboard.php`, `admin_approvals.php`, `master_tenants.php`, `admin_distances.php`)
+- **Akar Masalah dari Laporan Pengguna**:
+  - Pengguna menyampaikan: *"setiap tombol yang mengedit seperti tunda atau beri izin, evaluasi nanti pakainya dialog box atau pop up memunculkan seperti itu. apapun itu jadi tulisannya gak dibawah"*.
+  - Penyebab teknis: Kelas CSS `.login-modal-overlay` tidak didefinisikan secara global di CSS, sehingga saat JavaScript mengubah `display: flex`, elemen modal dirender di aliran normal dokumen paling bawah halaman (tidak melayang di tengah layar).
+- **Rencana Eksekusi**:
+  1. Tambahkan CSS global `.login-modal-overlay, .custom-modal-overlay` di [`views/header.php`](file:///c:/laragon/www/target_archery/views/header.php):
+     - `position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 99999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);`
+     - Kotak dialog `.login-error-modal, .custom-modal-box`: `position: relative; max-width: 540px; width: 92%; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);`
+  2. Terapkan secara rapi pada seluruh tombol aksi perizinan & evaluasi:
+     - Modal Beri Izin Ujian (`#grantModal`) di [`coach_dashboard.php`](file:///c:/laragon/www/target_archery/coach_dashboard.php)
+     - Modal Tunda / Batalkan Izin Ujian (`#revokeModal`) di [`coach_dashboard.php`](file:///c:/laragon/www/target_archery/coach_dashboard.php)
+     - Modal Evaluasi Pelatih (`#coachEvalModal`) di [`coach_dashboard.php`](file:///c:/laragon/www/target_archery/coach_dashboard.php) dan [`app_dashboard.php`](file:///c:/laragon/www/target_archery/app_dashboard.php)
+     - Modal ACC Kelulusan (`#approveModal`) & Modal Tolak Ujian (`#rejectModal`) di [`admin_approvals.php`](file:///c:/laragon/www/target_archery/admin_approvals.php)
+     - Modal Tambah/Edit Jarak (`#distanceModal`) di [`admin_distances.php`](file:///c:/laragon/www/target_archery/admin_distances.php)
+  3. Menjamin 100% dialog box selalu muncul di tengah layar monitor maupun HP secara elegan, tidak pernah tercecer ke bawah halaman.
+
+### 67. 📋 Sistem Checklist & Rubrik Kriteria Evaluasi Atlet Dinamis Buatan Super Admin (`setup_db.php`, `settings.php`, `api/save_session.php`, `plotter.php`, `coach_dashboard.php`, `report_session.php`, `app_dashboard.php`)
+- **Kebutuhan Pengguna**:
+  - *"untuk evaluasi bisa dibuat sama superadmin adn kategori nya apa saja misal pakai point nanti pakai check box... kita kan hanya mengambil contoh"*. Dilarang menuliskan nama brand formulir pihak ketiga.
+- **Rencana Eksekusi**:
+  1. Skema Database di [`setup_db.php`](file:///c:/laragon/www/target_archery/setup_db.php):
+     - Buat tabel `archery_eval_criteria`: `id, club_id, category, title, points, is_active, sort_order`.
+     - Seed indikator keterampilan standar panahan untuk Club 1 (An-Nahl) & Club 2 (Focus):
+       - Kategori *Sikap & Kuda-kuda (Stance)*: "Kuda-kuda seimbang & tegak lurus target" (10 poin), "Grip busur rileks tanpa mencengkeram" (10 poin).
+       - Kategori *Tarikan & Kuncian (Draw & Anchor)*: "Tarikan konsisten hingga anchor point bawah dagu" (10 poin), "Bahu bow-arm rendah & terkunci stabil" (10 poin).
+       - Kategori *Rilis & Lanjutan (Release & Follow-Through)*: "Rilis jari mengalir mulus ke belakang" (10 poin), "Follow-through busur dipertahankan 2 detik" (10 poin).
+       - Kategori *Fokus & Ritme Mental*: "Ritme pernafasan tenang & teratur" (10 poin), "Koreksi pisir & pengelompokan bidikan terarah" (10 poin).
+     - Tambah kolom di `archery_sessions`:
+       - `evaluation_checklist_json` TEXT DEFAULT NULL (menyimpan checklist ID yang dicentang pelatih beserta poinnya).
+       - `evaluation_checklist_score` INT DEFAULT 0 (akumulasi poin keterampilan atlet).
+  2. Pengaturan di Super Admin [`settings.php`](file:///c:/laragon/www/target_archery/settings.php):
+     - Tambahkan Tab: **"📋 Rubrik & Kriteria Evaluasi Atlet"**.
+     - Super Admin dapat menambah kriteria baru, menentukan kategori (Teknik, Form, Mental), mengisi bobot poin, dan mengaktifkan/menonaktifkan kriteria.
+  3. Form Evaluasi Pelatih di [`coach_dashboard.php`](file:///c:/laragon/www/target_archery/coach_dashboard.php), [`plotter.php`](file:///c:/laragon/www/target_archery/plotter.php), [`app_dashboard.php`](file:///c:/laragon/www/target_archery/app_dashboard.php):
+     - Menampilkan checklist interaktif berbasis kategori.
+     - Pelatih mencentang poin yang dikuasai atlet; total skor terhitung otomatis secara dinamis (misal: "Skor Keterampilan: 70 / 80 Poin (87.5%)").
+     - Didukung catatan kualitatif (Teknik, Mental, Rekomendasi).
+  4. Penyajian Hasil di Rapot Cetak A4 [`report_session.php`](file:///c:/laragon/www/target_archery/report_session.php) dan Portal Orang Tua [`app_dashboard.php`](file:///c:/laragon/www/target_archery/app_dashboard.php).
+
+### 68. 🔑 Arsitektur Dynamic Time-Based PIN Scoring Atlet Lapangan (5 Jam Expired) di Portal Orang Tua (`setup_db.php`, `app_dashboard.php`, `pin_login.php`, `api/pin_auth.php`, `login.php`)
+- **Kebutuhan Pengguna**:
+  - *"di orang tua gimana cara buat akses untuk pin anak sepertinya menu ini hilang, jadi ngisinya gak di satu hp. dan pin ini hanya berfungsi 5 jam saja dan selalu generate jadi gak sama terus pin nya"*.
+- **Rencana Eksekusi**:
+  1. Skema Database di [`setup_db.php`](file:///c:/laragon/www/target_archery/setup_db.php):
+     - Tambah kolom di `archery_archers`:
+       - `temp_field_pin VARCHAR(10) DEFAULT NULL` (PIN 6-digit acak yang aktif).
+       - `temp_field_pin_expires_at DATETIME DEFAULT NULL` (waktu expired, tepat 5 jam sejak dibuat).
+       - `temp_field_pin_created_at DATETIME DEFAULT NULL`
+       - `failed_pin_attempts INT DEFAULT 0` (counter proteksi brute force).
+       - `pin_lockout_until DATETIME DEFAULT NULL` (waktu kunci jika salah berulang).
+  2. Kartu Akses Lapangan di Portal Orang Tua ([`app_dashboard.php`](file:///c:/laragon/www/target_archery/app_dashboard.php)):
+     - Pasang kartu visual: **"🔑 Kunci Akses Scoring Mandiri Atlet (PIN Lapangan 5 Jam)"**.
+     - Tombol: `[ ⚡ Generate PIN Akses Lapangan (5 Jam) ]`.
+     - Saat di-generate:
+       - Sistem memanggil API internal yang membuat 6-digit PIN acak kriptografis (misal: `749 201`) dan mengatur masa berlaku `NOW() + INTERVAL 5 HOUR`.
+       - Menampilkan PIN dengan angka besar elegan, badge status aktif, dan countdown sisa waktu (misal: *"⏱️ Aktif hingga: 18:00 WIB (Sisa 4 Jam 58 Menit)"*).
+       - Tombol `[ 📲 Kirim PIN ke WhatsApp Anak ]`: otomatis membuka WhatsApp dengan pesan:
+         `🎯 *PIN SCORING LAPANGAN TARGET ARCHERY*\nHalo {nama_anak},\nIni PIN latihan scoring mandiri kamu hari ini:\n🔑 *{PIN}*\nSilakan buka link: {url_portal}/pin_login.php\n⚠️ PIN ini berlaku selama 5 jam. Semangat memanah! 🏹`
+       - Tombol `[ 🔄 Regenerasi PIN Baru ]`: langsung membatalkan PIN lama dan menerbitkan PIN baru.
+  3. Halaman Login PIN Atlet Khusus ([`pin_login.php`](file:///c:/laragon/www/target_archery/pin_login.php)) & Tab di [`login.php`](file:///c:/laragon/www/target_archery/login.php):
+     - Atlet di lapangan membuka link di HP-nya, memasukkan PIN 6-digit.
+     - Begitu valid, atlet langsung dialihkan ke [`plotter.php`](file:///c:/laragon/www/target_archery/plotter.php) untuk input tembakan tanpa bisa mengakses menu privat orang tua (billing/profil).
+
+### 69. 🛡️ Protokol Zero-Trust Brute-Force & Anti-Hacking Hardening pada PIN Scoring (`api/pin_auth.php`, `pin_login.php`)
+- **Kebutuhan Pengguna**:
+  - *"eksekusi dan jangan sampai ada celah hacker bisa masuk"*.
+- **Rencana Eksekusi Keamanan Siber**:
+  1. **Proteksi Anti-Brute Force & Lockout**:
+     - Maksimal 5x percobaan PIN salah per IP/atlet dalam kurun waktu 15 menit.
+     - Jika melanggar, IP diblokir sementara selama 15 menit (`HTTP 429 Too Many Requests`).
+  2. **Anti-Timing Attack**:
+     - Verifikasi PIN menggunakan fungsi `hash_equals()` PHP untuk mencegah pembacaan byte per byte melalui pengukuran latensi.
+  3. **Multi-Tenant Scoping Ketat**:
+     - Query verifikasi PIN wajib menyertakan `WHERE club_id = :cid AND is_active = 1 AND temp_field_pin_expires_at > NOW()`.
+     - PIN atlet Klub A tidak akan pernah bisa dipakai di Klub B.
+  4. **Pembersihan Otomatis**:
+     - Sesi yang login melalui PIN atlet diberi tanda `$_SESSION['is_field_pin'] = true` dan `$_SESSION['pin_expires_at'] = $expiresAt`. Middleware auth otomatis memutus sesi jika waktu telah melewati 5 jam.
+
+### 70. 👔 Eliminasi Super Admin dari Dropdown Coach & Perbaikan Kontras Warna Dropdown Format Sesi di Tema Gelap (`app_dashboard.php`, `views/header.php`) (Gambar 1)
+- **Akar Masalah dari Screenshot Pengguna (Gambar 1)**:
+  - Pada dropdown "Pilih Coach Pendamping":
+    1. Super Admin ikut muncul dan bisa dipilih sebagai Coach (`role IN ('coach', 'super_admin')`). Pengguna menegaskan: *di menu tembakan baru itu anehnya di pilih coach bisa milih super admin, sepertinya super admin gak bisa dipilih ya*.
+    2. Terdapat duplikasi kata "Coach" (*"Coach Coach Fadli Archery"*).
+  - Pada dropdown "Pilihan Format Sesi" di tema gelap (Gambar 1):
+    - Teks opsi dropdown berwarna putih/terang dengan latar belakang putih bawaan Windows Chrome, sehingga teks tidak terbaca (hilang). Di tema terang kelihatan.
+- **Rencana Eksekusi**:
+  1. Di `app_dashboard.php`:
+     - Filter ketat daftar coach: `SELECT id, full_name FROM archery_users WHERE role = 'coach' AND is_active = 1 AND club_id = :cid ORDER BY full_name ASC`. Super Admin mutlak dieliminasi dari daftar pendamping scoring.
+     - Hilangkan duplikasi kata "Coach": `<?= preg_replace('/^Coach\s+/i', '', $c['full_name']) ?>`.
+  2. Di `views/header.php`:
+     - Tambahkan aturan CSS global untuk elemen `<select>` dan `<option>` di tema gelap:
+       ```css
+       select.form-select option, select.form-control option, select option {
+           background-color: #111827 !important;
+           color: #f8fafc !important;
+       }
+       ```
+     - Menjamin teks opsi dropdown di seluruh aplikasi selalu hitam pekat kontras tinggi dengan teks putih terang di Google Chrome, Windows, maupun Android.
+
+### 71. 🎯 Perbaikan Target Plotter: Area Miss Luas, Tombol Cepat [ ❌ Input MISS ], dan Cache-Busting 5 Model Target Internasional (`plotter.php`, `assets/js/target_plotter.js`) (Gambar 2)
+- **Akar Masalah dari Laporan Pengguna (Gambar 2)**:
+  - Pengguna menyampaikan: *"papan target masih sama semua nih, coba kamu cari tau jenis papan target mulai dari ukuran dan yang pasti beda di poin nya"* dan *"ketika mengisi nilai di target nya bagian miss nya tuh kecil, sepertinya selain dari lingkaran dengan batas kotak itu nanti hasilnya miss"*.
+  - *Temuan Teknis*:
+    1. Browser menahan file JavaScript lawas karena loader di `plotter.php` tidak memiliki parameter cache-busting version (`?v=...`), sehingga perubahan visual dan logika model target belum termuat di sisi client.
+    2. Diameter lingkaran target mengisi 92% canvas (`radiusTarget = size * 0.46`), sehingga celah kotak untuk mengklik Miss (M / 0) sangat sempit dan menyulitkan atlet.
+- **Rencana Eksekusi**:
+  1. Pasang cache-busting dinamis di `plotter.php`:
+     `<script src="assets/js/target_plotter.js?v=<?= filemtime(__DIR__ . '/assets/js/target_plotter.js') ?>"></script>`.
+  2. Sesuaikan skala lingkaran target ke `radiusTarget = size * 0.38`, memberikan area bantalan target (target face buttress) yang luas di sekeliling lingkaran.
+  3. Setiap klik/sentuh di luar lingkaran target (dalam batas kotak canvas) otomatis dihitung sebagai **MISS (M / 0 Poin)**.
+  4. Sediakan tombol pintas cepat:
+     `[ ❌ Input MISS (0) ]` berdampingan dengan `[ ↩️ Undo Panah ]`, sehingga atlet dapat mencatat tembakan miss dengan satu sentuhan mudah.
+  5. Pertegas perbedaan visual dan aturan skor 5 model target internasional:
+     - **WA 10-Ring Standard (80/122/40cm)**: 10 cincin warna (Emas 10-9, Merah 8-7, Biru 6-5, Hitam 4-3, Putih 2-1) + X Ring.
+     - **WA 6-Ring Center Spot (Compound 50m / 18m)**: Hanya cincin 5 s/d 10 (Emas, Merah, Biru). Area luar cincin 5 berlatar abu-abu target dan bernilai MISS (0).
+     - **WA Indoor 3-Spot Vertical (Triple Spot 40cm)**: 3 target vertikal terpisah (Spot 1, Spot 2, Spot 3) masing-masing 6-10 + X, persis standar kompetisi World Archery Indoor.
+     - **NFAA Indoor Blue Face (300 Round)**: 4 cincin luar biru tua (1-4 poin) dengan garis putih, pusat putih (5 poin) + X-ring biru.
+     - **WA Field Archery Face**: 4 cincin luar hitam pekat (1-4 poin), pusat emas (5 poin) dan inner ring bernilai 6 poin.
+
+### 72. 👨‍🏫 Pemisahan Alur Sesi Atlet vs Evaluasi Pelatih & Kunci Rapot Resmi Sebelum Dievaluasi (`plotter.php`, `report_session.php`, `coach_dashboard.php`) (Gambar 2)
+- **Akar Masalah dari Laporan Pengguna (Gambar 2)**:
+  - Pengguna menginstruksikan: *"ketika input tembakan kan milih coach, ini akan pengaruh ke tampilan coach nya untuk menilai evaluasi. sedangkan di gambar ini tuh evaluasi diisinya ketika anak selesai menembak semuanya. harusnya hanya simpan-simpan nilai. dan nantinya kalau belum di evaluasi coach belum bisa cetak nilai"*.
+  - Di `plotter.php` saat ini, form evaluasi pelatih muncul di layar anak/atlet setelah 6 seri selesai, padahal atlet tidak seharusnya mengisi evaluasinya sendiri!
+- **Rencana Eksekusi**:
+  1. Di `plotter.php`:
+     - Hilangkan form input catatan pelatih dari tampilan anak/atlet.
+     - Saat atlet selesai menembak seluruh seri, plotter hanya menampilkan ringkasan skor dan tombol:
+       `[ 💾 Selesaikan Sesi & Simpan Nilai ]`
+     - Tampilkan pesan ramah:
+       `✅ Sesi Tembakan Selesai! Seluruh nilai berhasil tersimpan aman. Sesi ini telah diteruskan ke Coach {nama_coach} untuk pengisian evaluasi & catatan teknik.`
+  2. Pengisian Evaluasi HANYA oleh Pelatih:
+     - Sesi yang baru selesai berstatus `in_progress` / `pending_evaluation`.
+     - Pelatih yang ditunjuk membuka `coach_dashboard.php`, melihat sesi murid binaannya pada daftar *"Menunggu Evaluasi Pelatih"*, lalu mengklik modal `[ ✍️ Evaluasi Pelatih ]` (menggunakan checklist kriteria dinamis + catatan teknik).
+  3. Kunci Rapot Resmi Sebelum Evaluasi Coach Selesai:
+     - Di `report_session.php`: jika sesi belum dievaluasi oleh Coach (`coach_notes_technique` kosong), rapot resmi diberi banner & watermark proteksi:
+       `🔒 Rapot Belum Terverifikasi: Menunggu Evaluasi & Tanda Tangan Pelatih Pendamping (Coach {nama_coach}).`
+     - Tombol cetak PDF/A4 dinonaktifkan hingga Coach menyelesaikan evaluasi.
+
+---
+
 ## 🏆 STATUS EKSEKUSI & DEPLOYMENT
-- **Poin 1 s/d 59**: 100% Selesai, Teruji, dan Aktif di Server & Cloudflare.
-- **Poin 60 s/d 65**: Siap Dieksekusi Menunggu Konfirmasi Pengguna.
+- **Poin 1 s/d 65**: 100% Selesai, Teruji, dan Aktif di Server & Cloudflare.
+- **Poin 66 s/d 72**: Siap Dieksekusi Menunggu Konfirmasi Pengguna.
 
 
 

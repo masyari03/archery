@@ -104,6 +104,25 @@ if ($currentRole === 'super_admin') {
     $stmtRecentSessions->execute([':cid' => $clubId, ':coach_id' => $coachId]);
 }
 $recentSessions = $stmtRecentSessions->fetchAll();
+
+// Ambil Master Kriteria Evaluasi / Rubrik Penilaian Atlet untuk Klub ini
+$stmtCriteria = $pdo->prepare("SELECT * FROM archery_eval_criteria WHERE club_id = :cid AND is_active = 1 ORDER BY sort_order ASC, id ASC");
+$stmtCriteria->execute([':cid' => $clubId]);
+$evalCriteriaList = $stmtCriteria->fetchAll();
+if (empty($evalCriteriaList)) {
+    // Fallback jika belum ada kriteria spesifik klub
+    $stmtCriteria = $pdo->query("SELECT * FROM archery_eval_criteria WHERE is_active = 1 ORDER BY sort_order ASC, id ASC");
+    $evalCriteriaList = $stmtCriteria->fetchAll();
+}
+
+$groupedCriteria = [];
+$totalMaxPoints = 0;
+foreach ($evalCriteriaList as $item) {
+    $cat = $item['category'] ?: 'Umum';
+    $groupedCriteria[$cat][] = $item;
+    $totalMaxPoints += (int)$item['points'];
+}
+
 $pageTitle = "Dashboard Pelatih - TARGET ARCHERY";
 require_once __DIR__ . '/views/header.php';
 ?>
@@ -333,7 +352,7 @@ require_once __DIR__ . '/views/header.php';
                                 </td>
                                 <td style="white-space: nowrap;">
                                     <div style="display: flex; gap: 0.35rem;">
-                                        <button type="button" class="btn btn-outline-warning btn-sm" title="Beri / Edit Catatan Evaluasi Pelatih" onclick="openCoachEvalModal(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['archer_name'])) ?>', <?= htmlspecialchars(json_encode($s['coach_notes_technique'] ?? '')) ?>, <?= htmlspecialchars(json_encode($s['coach_notes_mental'] ?? '')) ?>, <?= htmlspecialchars(json_encode($s['coach_recommendation'] ?? '')) ?>)">
+                                        <button type="button" class="btn btn-outline-warning btn-sm fw-bold" title="Beri / Edit Catatan Evaluasi Pelatih" onclick="openCoachEvalModal(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['archer_name'])) ?>', <?= htmlspecialchars(json_encode($s['coach_notes_technique'] ?? '')) ?>, <?= htmlspecialchars(json_encode($s['coach_notes_mental'] ?? '')) ?>, <?= htmlspecialchars(json_encode($s['coach_recommendation'] ?? '')) ?>, <?= htmlspecialchars(json_encode($s['evaluation_checklist_json'] ?? '[]')) ?>)">
                                             ✍️ Evaluasi
                                         </button>
                                         <a href="plotter.php?session_id=<?= $s['id'] ?>" class="btn btn-secondary btn-sm" title="Buka Papan Plotter">
@@ -353,90 +372,199 @@ require_once __DIR__ . '/views/header.php';
     </div>
 </main>
 
-<!-- MODAL EVALUASI PELATIH SESI -->
-<div id="coachEvalModal" class="login-modal-overlay" style="display: none;">
-    <div class="login-error-modal" style="max-width: 520px; width: 92%; text-align: left;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
-            <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0; color: #fff;">
-                ✍️ Catatan Evaluasi Pelatih Sesi #<span id="evalSessionIdSpan"></span> (<span id="evalArcherNameSpan" style="color: var(--primary);"></span>)
-            </h3>
-            <button type="button" onclick="closeModals()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer;">&times;</button>
+<!-- MODAL EVALUASI PELATIH SESI (BOOTSTRAP CENTERED MODAL) -->
+<div class="modal fade" id="coachEvalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-secondary" style="background: #111827; color: #f8fafc;">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-white d-flex align-items-center gap-2">
+                    ✍️ Evaluasi &amp; Lembar Penilaian Sesi #<span id="evalSessionIdSpan"></span> 
+                    <span class="badge bg-primary text-white" id="evalArcherNameSpan"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="coachEvalFormDirect" onsubmit="submitCoachEval(event)">
+                <div class="modal-body p-3 p-md-4">
+                    <input type="hidden" id="evalSessionIdInput">
+                    
+                    <!-- RUBRIK EVALUASI CHECKLIST KETERAMPILAN DINAMIS -->
+                    <div class="card mb-4 border-secondary" style="background: rgba(15, 23, 42, 0.7);">
+                        <div class="card-header border-secondary d-flex justify-content-between align-items-center py-2 px-3">
+                            <span class="small fw-bold text-warning d-flex align-items-center gap-1">
+                                <i class="bi bi-ui-checks"></i> Rubrik Penilaian &amp; Capaian Atlet
+                            </span>
+                            <span class="badge bg-dark border border-warning text-warning" id="liveScoreBadge">
+                                Skor Capaian: 0 / <?= $totalMaxPoints ?> Poin (0%)
+                            </span>
+                        </div>
+                        <div class="card-body p-3" style="max-height: 260px; overflow-y: auto;">
+                            <?php if (empty($groupedCriteria)): ?>
+                                <p class="text-muted small mb-0">Belum ada rubrik evaluasi yang disetup oleh Super Admin.</p>
+                            <?php else: ?>
+                                <?php foreach ($groupedCriteria as $catName => $items): ?>
+                                    <div class="mb-3">
+                                        <div class="small fw-bold text-info border-bottom border-secondary border-opacity-25 pb-1 mb-2">
+                                            <?= htmlspecialchars($catName) ?>
+                                        </div>
+                                        <div class="row g-2">
+                                            <?php foreach ($items as $crit): ?>
+                                                <div class="col-md-6">
+                                                    <div class="form-check p-2 rounded border border-secondary border-opacity-25" style="background: rgba(255,255,255,0.02);">
+                                                        <input class="form-check-input eval-checklist-item" type="checkbox" 
+                                                               id="crit_<?= $crit['id'] ?>" 
+                                                               value="<?= $crit['id'] ?>" 
+                                                               data-points="<?= (int)$crit['points'] ?>"
+                                                               data-title="<?= htmlspecialchars($crit['title']) ?>"
+                                                               data-category="<?= htmlspecialchars($crit['category']) ?>"
+                                                               onchange="calcLiveChecklistScore()">
+                                                        <label class="form-check-label small text-light d-flex justify-content-between align-items-center" for="crit_<?= $crit['id'] ?>">
+                                                            <span><?= htmlspecialchars($crit['title']) ?></span>
+                                                            <span class="badge bg-secondary ms-2">+<?= (int)$crit['points'] ?>pt</span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white">1. Evaluasi Form &amp; Teknik (Stance, Anchor, Release) <span class="text-danger">*</span></label>
+                        <textarea class="form-control bg-dark text-white border-secondary" id="evalTechnique" rows="3" placeholder="Contoh: Tarikan siku konsisten, perbaiki rilis agar tidak menyentak..." required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white">2. Evaluasi Mental &amp; Fokus Atlet</label>
+                        <input type="text" class="form-control bg-dark text-white border-secondary" id="evalMental" placeholder="Contoh: Sangat tenang saat tembakan terakhir">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white">3. Rekomendasi / PR Latihan Mandiri di Rumah</label>
+                        <input type="text" class="form-control bg-dark text-white border-secondary" id="evalRecom" placeholder="Contoh: Latihan SPT 15 menit setiap pagi">
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4" id="btnSaveCoachEval">
+                        <i class="bi bi-check-circle-fill"></i> Simpan Evaluasi &amp; Buka Kunci Rapot
+                    </button>
+                </div>
+            </form>
         </div>
-        <form id="coachEvalFormDirect" onsubmit="submitCoachEval(event)">
-            <input type="hidden" id="evalSessionIdInput">
-            <div class="form-group" style="margin-bottom: 0.85rem;">
-                <label class="form-label" style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1;">1. Evaluasi Form &amp; Teknik (Stance, Anchor, Release)</label>
-                <textarea class="form-control" id="evalTechnique" rows="3" placeholder="Contoh: Tarikan siku konsisten, perbaiki rilis agar tidak menyentak..."></textarea>
-            </div>
-            <div class="form-group" style="margin-bottom: 0.85rem;">
-                <label class="form-label" style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1;">2. Evaluasi Mental &amp; Fokus</label>
-                <input type="text" class="form-control" id="evalMental" placeholder="Contoh: Sangat tenang saat tembakan terakhir"></textarea>
-            </div>
-            <div class="form-group" style="margin-bottom: 0.85rem;">
-                <label class="form-label" style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1;">3. Rekomendasi / PR Latihan di Rumah</label>
-                <input type="text" class="form-control" id="evalRecom" placeholder="Contoh: Latihan SPT 15 menit setiap pagi">
-            </div>
-            <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
-                <button type="button" class="btn btn-secondary btn-block" onclick="closeModals()">Batal</button>
-                <button type="submit" class="btn btn-primary btn-block" id="btnSaveCoachEval">💾 Simpan Catatan</button>
-            </div>
-        </form>
     </div>
 </div>
 
-<!-- MODAL BERI IZIN UJIAN KENAIKAN JARAK -->
-<div id="grantModal" class="login-modal-overlay" style="display: none;">
-    <div class="login-error-modal">
-        <h3 style="margin-top: 0; color: var(--primary);">⭐ Beri Izin Ujian Kenaikan Jarak</h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted);">
-            Anda memberikan rekomendasi resmi bahwa atlet <b id="grantArcherName" style="color:#fff;"></b> telah siap secara fisik dan teknik untuk mengambil sesi ujian scoring naik jarak.
-        </p>
-        <form method="POST">
-            <input type="hidden" name="action" value="grant_exam">
-            <input type="hidden" name="archer_id" id="grantArcherId">
-            <div class="form-group" style="text-align: left;">
-                <label class="form-label">Catatan Rekomendasi Pelatih:</label>
-                <textarea class="form-control" name="coach_notes" rows="3" placeholder="Contoh: Form rilis sudah konsisten dan stabilitas anchor point matang, layak ambil ujian scoring...">Form tarikan dan konsistensi grouping sangat stabil. Direkomendasikan untuk uji kenaikan jarak.</textarea>
+<!-- MODAL BERI IZIN UJIAN KENAIKAN JARAK (BOOTSTRAP CENTERED MODAL) -->
+<div class="modal fade" id="grantModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-secondary" style="background: #111827; color: #f8fafc;">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-warning d-flex align-items-center gap-2">
+                    ⭐ Beri Izin Ujian Kenaikan Jarak
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
-                <button type="button" class="btn btn-secondary btn-block" onclick="closeModals()">Batal</button>
-                <button type="submit" class="btn btn-primary btn-block">✔ Berikan Izin</button>
-            </div>
-        </form>
+            <form method="POST">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="action" value="grant_exam">
+                    <input type="hidden" name="archer_id" id="grantArcherId">
+                    <p class="small text-muted mb-3">
+                        Anda memberikan rekomendasi resmi bahwa ananda <strong class="text-white" id="grantArcherName"></strong> telah siap secara fisik dan teknik untuk mengambil sesi ujian scoring naik jarak.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white">Catatan Rekomendasi Pelatih:</label>
+                        <textarea class="form-control bg-dark text-white border-secondary" name="coach_notes" rows="3" placeholder="Alasan rekomendasi...">Form tarikan dan konsistensi grouping sangat stabil. Direkomendasikan untuk uji kenaikan jarak.</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">✔ Berikan Izin</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
-<!-- MODAL TUNDA / BATALKAN IZIN UJIAN -->
-<div id="revokeModal" class="login-modal-overlay" style="display: none;">
-    <div class="login-error-modal">
-        <h3 style="margin-top: 0; color: #f59e0b;">⏸️ Tunda Izin Ujian Kenaikan Jarak</h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted);">
-            Tunda sementara izin ujian untuk atlet <b id="revokeArcherName" style="color:#fff;"></b> jika teknik/form perlu pemantapan lebih lanjut.
-        </p>
-        <form method="POST">
-            <input type="hidden" name="action" value="revoke_exam">
-            <input type="hidden" name="archer_id" id="revokeArcherId">
-            <div class="form-group" style="text-align: left;">
-                <label class="form-label">Alasan Penundaan / PR Evaluasi:</label>
-                <textarea class="form-control" name="coach_notes" rows="3" placeholder="Contoh: Perlu pemantapan follow-through dan SPT 2 pekan ke depan sebelum scoring...">Perlu pemantapan stabilitas bow arm dan follow-through sebelum mengambil sesi ujian scoring.</textarea>
+<!-- MODAL TUNDA / BATALKAN IZIN UJIAN (BOOTSTRAP CENTERED MODAL) -->
+<div class="modal fade" id="revokeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-secondary" style="background: #111827; color: #f8fafc;">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-warning d-flex align-items-center gap-2">
+                    ⏸️ Tunda Izin Ujian Kenaikan Jarak
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
-                <button type="button" class="btn btn-secondary btn-block" onclick="closeModals()">Batal</button>
-                <button type="submit" class="btn btn-secondary btn-block" style="color: #f59e0b; border-color: #f59e0b;">⏸️ Tunda Izin</button>
-            </div>
-        </form>
+            <form method="POST">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="action" value="revoke_exam">
+                    <input type="hidden" name="archer_id" id="revokeArcherId">
+                    <p class="small text-muted mb-3">
+                        Tunda sementara izin ujian untuk ananda <strong class="text-white" id="revokeArcherName"></strong> jika teknik/form perlu pemantapan lebih lanjut.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white">Alasan Penundaan / PR Evaluasi:</label>
+                        <textarea class="form-control bg-dark text-white border-secondary" name="coach_notes" rows="3" placeholder="Alasan penundaan...">Perlu pemantapan stabilitas bow arm dan follow-through sebelum mengambil sesi ujian scoring.</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning fw-bold px-4 text-dark">⏸️ Tunda Izin</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 <script>
-function openCoachEvalModal(sessId, archerName, tech, mental, recom) {
+let coachModalInstance = null;
+let grantModalInstance = null;
+let revokeModalInstance = null;
+
+function openCoachEvalModal(sessId, archerName, tech, mental, recom, checklistJson) {
     document.getElementById('evalSessionIdInput').value = sessId;
     document.getElementById('evalSessionIdSpan').textContent = sessId;
     document.getElementById('evalArcherNameSpan').textContent = archerName;
     document.getElementById('evalTechnique').value = tech || '';
     document.getElementById('evalMental').value = mental || '';
     document.getElementById('evalRecom').value = recom || '';
-    document.getElementById('coachEvalModal').style.display = 'flex';
+
+    // Populate checklist checkboxes
+    let activeIds = [];
+    if (checklistJson) {
+        try {
+            const parsed = typeof checklistJson === 'string' ? JSON.parse(checklistJson) : checklistJson;
+            if (Array.isArray(parsed)) {
+                activeIds = parsed.map(x => String(x.id || x));
+            }
+        } catch(e){}
+    }
+    document.querySelectorAll('.eval-checklist-item').forEach(cb => {
+        cb.checked = activeIds.includes(String(cb.value));
+    });
+    calcLiveChecklistScore();
+
+    if (!coachModalInstance) {
+        coachModalInstance = new bootstrap.Modal(document.getElementById('coachEvalModal'));
+    }
+    coachModalInstance.show();
+}
+
+function calcLiveChecklistScore() {
+    let earned = 0;
+    const max = <?= (int)$totalMaxPoints ?>;
+    document.querySelectorAll('.eval-checklist-item:checked').forEach(cb => {
+        earned += parseInt(cb.dataset.points) || 0;
+    });
+    const pct = max > 0 ? Math.round((earned / max) * 100) : 0;
+    const badge = document.getElementById('liveScoreBadge');
+    if (badge) {
+        badge.textContent = `Skor Capaian: ${earned} / ${max} Poin (${pct}%)`;
+    }
+    return { earned, max, pct };
 }
 
 async function submitCoachEval(e) {
@@ -446,11 +574,26 @@ async function submitCoachEval(e) {
     btn.textContent = 'Menyimpan...';
 
     const sessId = document.getElementById('evalSessionIdInput').value;
+    const selectedCriteria = [];
+    let checklistScore = 0;
+    document.querySelectorAll('.eval-checklist-item:checked').forEach(cb => {
+        checklistScore += parseInt(cb.dataset.points) || 0;
+        selectedCriteria.push({
+            id: parseInt(cb.value),
+            title: cb.dataset.title,
+            category: cb.dataset.category,
+            points: parseInt(cb.dataset.points) || 0
+        });
+    });
+
     const payload = {
         session_id: parseInt(sessId),
         coach_notes_technique: document.getElementById('evalTechnique').value,
         coach_notes_mental: document.getElementById('evalMental').value,
         coach_recommendation: document.getElementById('evalRecom').value,
+        evaluation_checklist_json: selectedCriteria,
+        evaluation_checklist_score: checklistScore,
+        evaluation_max_score: <?= (int)$totalMaxPoints ?>,
         mark_completed: true
     };
 
@@ -462,7 +605,7 @@ async function submitCoachEval(e) {
         });
         const json = await res.json();
         if (json.status === 'success') {
-            alert('✔ Catatan evaluasi pelatih berhasil disimpan!');
+            alert('✔ Catatan evaluasi pelatih & skor rubrik berhasil disimpan!');
             location.reload();
         } else {
             alert('Gagal: ' + (json.message || 'Terjadi kesalahan'));
@@ -471,29 +614,26 @@ async function submitCoachEval(e) {
         alert('Terjadi kesalahan jaringan: ' + err.message);
     } finally {
         btn.disabled = false;
-        btn.textContent = '💾 Simpan Catatan';
+        btn.textContent = '💾 Simpan Evaluasi & Buka Kunci Rapot';
     }
 }
 
 function openGrantModal(id, name) {
     document.getElementById('grantArcherId').value = id;
     document.getElementById('grantArcherName').textContent = name;
-    document.getElementById('grantModal').style.display = 'flex';
+    if (!grantModalInstance) {
+        grantModalInstance = new bootstrap.Modal(document.getElementById('grantModal'));
+    }
+    grantModalInstance.show();
 }
 
 function openRevokeModal(id, name) {
     document.getElementById('revokeArcherId').value = id;
     document.getElementById('revokeArcherName').textContent = name;
-    document.getElementById('revokeModal').style.display = 'flex';
-}
-
-function closeModals() {
-    const gm = document.getElementById('grantModal');
-    const rm = document.getElementById('revokeModal');
-    const cm = document.getElementById('coachEvalModal');
-    if (gm) gm.style.display = 'none';
-    if (rm) rm.style.display = 'none';
-    if (cm) cm.style.display = 'none';
+    if (!revokeModalInstance) {
+        revokeModalInstance = new bootstrap.Modal(document.getElementById('revokeModal'));
+    }
+    revokeModalInstance.show();
 }
 </script>
 

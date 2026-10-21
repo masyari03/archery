@@ -62,6 +62,34 @@ if ($currentRole === 'coach' || $currentRole === 'super_admin') {
     $dashboardBackUrl = 'master_tenants.php';
 }
 
+// Cek kelayakan cetak: Sesi resmi wajib memiliki evaluasi catatan teknik atau skor checklist dari Coach
+$isEvaluated = !empty(trim($session['coach_notes_technique'] ?? '')) || !empty($session['evaluation_checklist_score']);
+
+// Ambil Kriteria Rubrik Evaluasi untuk Klub ini
+$stmtCriteria = $pdo->prepare("SELECT * FROM archery_eval_criteria WHERE club_id = :cid AND is_active = 1 ORDER BY sort_order ASC, id ASC");
+$stmtCriteria->execute([':cid' => (int)$session['club_id']]);
+$evalCriteriaList = $stmtCriteria->fetchAll();
+if (empty($evalCriteriaList)) {
+    $stmtCriteria = $pdo->query("SELECT * FROM archery_eval_criteria WHERE is_active = 1 ORDER BY sort_order ASC, id ASC");
+    $evalCriteriaList = $stmtCriteria->fetchAll();
+}
+
+$groupedCriteria = [];
+$totalMaxPoints = 0;
+foreach ($evalCriteriaList as $item) {
+    $cat = $item['category'] ?: 'Umum';
+    $groupedCriteria[$cat][] = $item;
+    $totalMaxPoints += (int)$item['points'];
+}
+
+$checklistItems = [];
+if (!empty($session['evaluation_checklist_json'])) {
+    $decoded = json_decode($session['evaluation_checklist_json'], true);
+    if (is_array($decoded)) {
+        $checklistItems = $decoded;
+    }
+}
+
 $pageTitle = "Rapot Sesi Latihan - " . htmlspecialchars($session['archer_name']);
 require_once __DIR__ . '/views/header.php';
 ?>
@@ -72,22 +100,40 @@ require_once __DIR__ . '/views/header.php';
     <a href="<?= $dashboardBackUrl ?>" class="btn btn-secondary btn-sm fw-bold">
         ⬅ Kembali ke Dashboard
     </a>
-    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
         <?php if (in_array($currentRole, ['coach', 'super_admin'])): ?>
-            <button type="button" class="btn btn-outline-warning btn-sm fw-bold" onclick="openEvalModal()">
-                ✍️ Catatan / Evaluasi Pelatih
+            <button type="button" class="btn btn-outline-warning btn-sm fw-bold shadow-sm" onclick="openEvalModal()">
+                ✍️ Lembar Evaluasi &amp; Rubrik Pelatih
             </button>
         <?php endif; ?>
         <a href="share_card.php?session_id=<?= $session['id'] ?>" class="btn btn-secondary btn-sm" style="color: #38bdf8;">
-            📱 Buat Kartu Medsos
+            📱 Kartu Medsos
         </a>
-        <button type="button" class="btn btn-primary btn-sm fw-bold" onclick="window.print()">
-            🖨️ Cetak Rapot Resmi (Print/PDF)
-        </button>
+        <?php if ($isEvaluated): ?>
+            <button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm" onclick="window.print()">
+                🖨️ Cetak Rapot Resmi (Print/PDF)
+            </button>
+        <?php else: ?>
+            <button type="button" class="btn btn-secondary btn-sm fw-bold" disabled title="Lembar rapot terkunci hingga Coach mengisi evaluasi">
+                🔒 Cetak Terkunci (Menunggu Evaluasi Coach)
+            </button>
+        <?php endif; ?>
     </div>
 </div>
 
 <div class="report-card-page">
+    <?php if (!$isEvaluated): ?>
+        <div class="alert alert-warning py-3 px-4 mb-3 d-flex align-items-center gap-3 no-print" style="background: rgba(245, 158, 11, 0.12); border: 2px dashed #f59e0b; color: #fde68a; border-radius: 8px;">
+            <div style="font-size: 2rem;">🔒</div>
+            <div>
+                <h5 class="mb-1 fw-bold text-warning">Lembar Rapot Resmi Belum Disahkan Coach</h5>
+                <p class="mb-0 small" style="color: #cbd5e1;">
+                    Sesi latihan ini telah selesai ditembakkan, namun masih menunggu evaluasi form &amp; catatan teknik dari <b>Coach <?= htmlspecialchars($session['coach_name'] ?? 'Pelatih') ?></b>. Dokumen resmi cetak A4 akan terbuka otomatis setelah Coach memberikan penilaian.
+                </p>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <!-- 1. KOP SURAT RESMI KLUB PANAHAN -->
     <div class="report-header">
         <div class="report-logo">🎯</div>
@@ -204,9 +250,26 @@ require_once __DIR__ . '/views/header.php';
     <!-- 4. CATATAN & EVALUASI RESMI DARI PELATIH -->
     <div class="coach-eval-box">
         <div class="coach-eval-title">
-            📝 EVALUASI & CATATAN PERKEMBANGAN DARI PELATIH
+            📝 EVALUASI &amp; CATATAN PERKEMBANGAN DARI PELATIH
         </div>
         <div class="coach-eval-content">
+            <?php if (!empty($checklistItems)): ?>
+                <div style="margin-bottom: 0.65rem; padding: 0.45rem 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                        <b style="font-size: 0.8rem; color: #0f172a;">🎯 Capaian Rubrik Standar:</b>
+                        <span style="font-size: 0.8rem; font-weight: 700; color: #0284c7;">
+                            Skor: <?= (int)$session['evaluation_checklist_score'] ?> / <?= (int)($session['evaluation_max_score'] ?: $totalMaxPoints) ?> Poin (<?= round(((int)$session['evaluation_checklist_score'] / max(1, (int)($session['evaluation_max_score'] ?: $totalMaxPoints))) * 100) ?>%)
+                        </span>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                        <?php foreach ($checklistItems as $it): ?>
+                            <span style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; border: 1px solid #bae6fd;">
+                                ✔ <?= htmlspecialchars($it['title'] ?? '') ?> (+<?= (int)($it['points'] ?? 0) ?>pt)
+                            </span>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
             <p style="margin-bottom: 0.35rem;">
                 <b>1. Form & Eksekusi Teknik:</b><br>
                 <?= !empty($session['coach_notes_technique']) ? nl2br(htmlspecialchars($session['coach_notes_technique'])) : 'Teknik tarikan dan anchor point cukup konsisten. Pertahankan kestabilan bow arm.' ?>
@@ -248,57 +311,145 @@ require_once __DIR__ . '/views/header.php';
     </div>
 </div>
 
-<!-- MODAL EVALUASI PELATIH (KHUSUS COACH & SUPER ADMIN) -->
-<div id="evalModal" class="login-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1050; align-items: center; justify-content: center; backdrop-filter: blur(6px);">
-    <div class="card" style="max-width: 520px; width: 92%; background: #0f172a; border: 1px solid var(--border-color); border-radius: 14px; padding: 1.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
-            <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0; color: #fff;">
-                ✍️ Catatan &amp; Evaluasi Pelatih Sesi #<?= $session['id'] ?>
-            </h3>
-            <button type="button" onclick="closeEvalModal()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer;">&times;</button>
+<!-- MODAL EVALUASI PELATIH (BOOTSTRAP CENTERED MODAL) -->
+<div class="modal fade" id="evalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-secondary" style="background: #111827; color: #f8fafc;">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-white d-flex align-items-center gap-2">
+                    ✍️ Lembar Evaluasi Pelatih Sesi #<?= $session['id'] ?> (<?= htmlspecialchars($session['archer_name']) ?>)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="evalForm" onsubmit="submitEvalForm(event)">
+                <div class="modal-body p-3 p-md-4">
+                    <input type="hidden" name="session_id" value="<?= $session['id'] ?>">
+
+                    <!-- RUBRIK EVALUASI CHECKLIST KETERAMPILAN DINAMIS -->
+                    <div class="card mb-4 border-secondary" style="background: rgba(15, 23, 42, 0.7);">
+                        <div class="card-header border-secondary d-flex justify-content-between align-items-center py-2 px-3">
+                            <span class="small fw-bold text-warning d-flex align-items-center gap-1">
+                                <i class="bi bi-ui-checks"></i> Rubrik Kriteria Penilaian Atlet
+                            </span>
+                            <span class="badge bg-dark border border-warning text-warning" id="reportLiveScoreBadge">
+                                Skor: 0 / <?= $totalMaxPoints ?> Poin (0%)
+                            </span>
+                        </div>
+                        <div class="card-body p-3" style="max-height: 240px; overflow-y: auto;">
+                            <?php if (empty($groupedCriteria)): ?>
+                                <p class="text-muted small mb-0">Belum ada rubrik evaluasi yang disetup oleh Super Admin.</p>
+                            <?php else: ?>
+                                <?php 
+                                $activeChecklistIds = array_map(function($x) { return (int)($x['id'] ?? 0); }, $checklistItems);
+                                foreach ($groupedCriteria as $catName => $items): 
+                                ?>
+                                    <div class="mb-3">
+                                        <div class="small fw-bold text-info border-bottom border-secondary border-opacity-25 pb-1 mb-2">
+                                            <?= htmlspecialchars($catName) ?>
+                                        </div>
+                                        <div class="row g-2">
+                                            <?php foreach ($items as $crit): 
+                                                $isChecked = in_array((int)$crit['id'], $activeChecklistIds);
+                                            ?>
+                                                <div class="col-md-6">
+                                                    <div class="form-check p-2 rounded border border-secondary border-opacity-25" style="background: rgba(255,255,255,0.02);">
+                                                        <input class="form-check-input report-eval-item" type="checkbox" 
+                                                               id="rep_crit_<?= $crit['id'] ?>" 
+                                                               value="<?= $crit['id'] ?>" 
+                                                               data-points="<?= (int)$crit['points'] ?>"
+                                                               data-title="<?= htmlspecialchars($crit['title']) ?>"
+                                                               data-category="<?= htmlspecialchars($crit['category']) ?>"
+                                                               <?= $isChecked ? 'checked' : '' ?>
+                                                               onchange="calcReportLiveScore()">
+                                                        <label class="form-check-label small text-light d-flex justify-content-between align-items-center" for="rep_crit_<?= $crit['id'] ?>">
+                                                            <span><?= htmlspecialchars($crit['title']) ?></span>
+                                                            <span class="badge bg-secondary ms-2">+<?= (int)$crit['points'] ?>pt</span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-light mb-1">1. Form &amp; Eksekusi Teknik (Stance, Anchor, Release) <span class="text-danger">*</span></label>
+                        <textarea class="form-control bg-dark text-white border-secondary" name="coach_notes_technique" id="modalTechnique" rows="3" placeholder="Evaluasi posisi badan, tarikan, jangkar, dan pelepasan panah..." required><?= htmlspecialchars($session['coach_notes_technique'] ?? '') ?></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-light mb-1">2. Fokus &amp; Mental Atlet</label>
+                        <input type="text" class="form-control bg-dark text-white border-secondary" name="coach_notes_mental" id="modalMental" value="<?= htmlspecialchars($session['coach_notes_mental'] ?? '') ?>" placeholder="Tingkat ketenangan, ritme pernapasan, konsentrasi...">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-light mb-1">3. Rekomendasi / PR Latihan Mandiri di Rumah</label>
+                        <input type="text" class="form-control bg-dark text-white border-secondary" name="coach_recommendation" id="modalRecom" value="<?= htmlspecialchars($session['coach_recommendation'] ?? '') ?>" placeholder="Tugas latihan SPT, karet resistensi, push up...">
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4" id="saveEvalBtn">💾 Simpan Evaluasi &amp; Buka Rapot</button>
+                </div>
+            </form>
         </div>
-        <form id="evalForm" onsubmit="submitEvalForm(event)">
-            <input type="hidden" name="session_id" value="<?= $session['id'] ?>">
-            <div class="form-group mb-3">
-                <label class="form-label small fw-bold text-light mb-1">1. Form &amp; Eksekusi Teknik (Stance, Anchor, Release)</label>
-                <textarea class="form-control" name="coach_notes_technique" id="modalTechnique" rows="3" placeholder="Evaluasi posisi badan, tarikan, jangkar, dan pelepasan panah..." style="background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.15);"><?= htmlspecialchars($session['coach_notes_technique'] ?? '') ?></textarea>
-            </div>
-            <div class="form-group mb-3">
-                <label class="form-label small fw-bold text-light mb-1">2. Fokus &amp; Mental Atlet</label>
-                <input type="text" class="form-control" name="coach_notes_mental" id="modalMental" value="<?= htmlspecialchars($session['coach_notes_mental'] ?? '') ?>" placeholder="Tingkat ketenangan, ritme pernapasan, konsentrasi..." style="background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.15);">
-            </div>
-            <div class="form-group mb-3">
-                <label class="form-label small fw-bold text-light mb-1">3. Rekomendasi / PR Latihan Mandiri di Rumah</label>
-                <input type="text" class="form-control" name="coach_recommendation" id="modalRecom" value="<?= htmlspecialchars($session['coach_recommendation'] ?? '') ?>" placeholder="Tugas latihan SPT, karet resistensi, push up..." style="background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.15);">
-            </div>
-            <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem;">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="closeEvalModal()">Batal</button>
-                <button type="submit" class="btn btn-primary btn-sm fw-bold px-3" id="saveEvalBtn">💾 Simpan Evaluasi</button>
-            </div>
-        </form>
     </div>
 </div>
 
 <script>
+let reportEvalModalInst = null;
+
 function openEvalModal() {
-    const m = document.getElementById('evalModal');
-    if (m) m.style.display = 'flex';
+    calcReportLiveScore();
+    if (!reportEvalModalInst) {
+        reportEvalModalInst = new bootstrap.Modal(document.getElementById('evalModal'));
+    }
+    reportEvalModalInst.show();
 }
-function closeEvalModal() {
-    const m = document.getElementById('evalModal');
-    if (m) m.style.display = 'none';
+
+function calcReportLiveScore() {
+    let earned = 0;
+    const max = <?= (int)$totalMaxPoints ?>;
+    document.querySelectorAll('.report-eval-item:checked').forEach(cb => {
+        earned += parseInt(cb.dataset.points) || 0;
+    });
+    const pct = max > 0 ? Math.round((earned / max) * 100) : 0;
+    const badge = document.getElementById('reportLiveScoreBadge');
+    if (badge) {
+        badge.textContent = `Skor: ${earned} / ${max} Poin (${pct}%)`;
+    }
+    return { earned, max, pct };
 }
+
 async function submitEvalForm(e) {
     e.preventDefault();
     const btn = document.getElementById('saveEvalBtn');
     btn.disabled = true;
     btn.textContent = 'Menyimpan...';
 
+    const selectedCriteria = [];
+    let checklistScore = 0;
+    document.querySelectorAll('.report-eval-item:checked').forEach(cb => {
+        checklistScore += parseInt(cb.dataset.points) || 0;
+        selectedCriteria.push({
+            id: parseInt(cb.value),
+            title: cb.dataset.title,
+            category: cb.dataset.category,
+            points: parseInt(cb.dataset.points) || 0
+        });
+    });
+
     const payload = {
         session_id: <?= (int)$session['id'] ?>,
         coach_notes_technique: document.getElementById('modalTechnique').value,
         coach_notes_mental: document.getElementById('modalMental').value,
         coach_recommendation: document.getElementById('modalRecom').value,
+        evaluation_checklist_json: selectedCriteria,
+        evaluation_checklist_score: checklistScore,
+        evaluation_max_score: <?= (int)$totalMaxPoints ?>,
         mark_completed: true
     };
 
@@ -310,7 +461,7 @@ async function submitEvalForm(e) {
         });
         const json = await res.json();
         if (json.status === 'success') {
-            alert('✔ Catatan evaluasi pelatih berhasil disimpan!');
+            alert('✔ Catatan evaluasi pelatih & rubrik capaian berhasil disimpan! Rapot kini dapat dicetak.');
             location.reload();
         } else {
             alert('Gagal: ' + (json.message || 'Terjadi kesalahan'));
@@ -319,7 +470,7 @@ async function submitEvalForm(e) {
         alert('Terjadi kesalahan jaringan: ' + err.message);
     } finally {
         btn.disabled = false;
-        btn.textContent = '💾 Simpan Evaluasi';
+        btn.textContent = '💾 Simpan Evaluasi & Buka Rapot';
     }
 }
 </script>

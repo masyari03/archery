@@ -351,71 +351,93 @@ require_once __DIR__ . '/views/header.php';
     </div>
 </main>
 
-<!-- MODAL ACC KELULUSAN -->
-<div id="approveModal" class="login-modal-overlay" style="display: none;">
-    <div class="login-error-modal">
-        <h3 style="margin-top: 0; color: var(--success);">✅ Sahkan Kelulusan Kenaikan Jarak</h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted);">
-            Sahkan kelulusan ananda <b id="appArcherName" style="color:#fff;"></b> dari jarak <b id="appFromDist" style="color:var(--primary);"></b>m dengan skor <b id="appScore" style="color:#34d399;"></b>/300.
-        </p>
-        <p style="font-size: 0.78rem; color: var(--text-dim);">
-            Sistem akan menaikkan level jarak atlet secara permanen di database dan mengirimkan notifikasi WhatsApp kelulusan kepada orang tua.
-        </p>
-        <form method="POST">
-            <input type="hidden" name="action" value="approve">
-            <input type="hidden" name="session_id" id="appSessionId">
-            <div class="form-group" style="text-align: left;">
-                <label class="form-label">Catatan Pengesahan Ketua / Admin:</label>
-                <textarea class="form-control" name="admin_notes" rows="2" placeholder="Catatan resmi pengesahan rapot...">Selamat dan barakallahu fiikum. Terus giat berlatih di jarak yang baru!</textarea>
+<!-- MODAL ACC KELULUSAN (BOOTSTRAP CENTERED MODAL) -->
+<div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-secondary" style="background: #111827; color: #f8fafc;">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-success d-flex align-items-center gap-2">
+                    ✅ Sahkan Kelulusan Kenaikan Jarak
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
-                <button type="button" class="btn btn-secondary btn-block" onclick="closeApprovalModals()">Batal</button>
-                <button type="submit" class="btn btn-primary btn-block">✔ ACC & Kirim WA</button>
-            </div>
-        </form>
+            <form method="POST">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="action" value="approve">
+                    <input type="hidden" name="session_id" id="appSessionId">
+                    <p class="small text-muted mb-2">
+                        Sahkan kelulusan ananda <strong class="text-white" id="appArcherName"></strong> dari jarak <strong class="text-info" id="appFromDist"></strong>m dengan perolehan skor <strong class="text-success" id="appScore"></strong>/300.
+                    </p>
+                    <p class="small text-secondary mb-3">
+                        Sistem akan menaikkan level jarak atlet secara otomatis di database dan mengirimkan notifikasi WhatsApp kelulusan kepada orang tua.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white">Catatan Pengesahan Ketua / Admin:</label>
+                        <textarea class="form-control bg-dark text-white border-secondary" name="admin_notes" rows="2" placeholder="Catatan resmi pengesahan rapot...">Selamat dan barakallahu fiikum. Terus giat berlatih di jarak yang baru!</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">✔ ACC &amp; Kirim WA</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
-<!-- MODAL TOLAK UJIAN -->
-<div id="rejectModal" class="login-modal-overlay" style="display: none;">
-    <div class="login-error-modal">
-        <h3 style="margin-top: 0; color: var(--danger);">❌ Tolak Pengesahan Ujian</h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted);">
-            Tolak pengesahan ujian untuk ananda <b id="rejArcherName" style="color:#fff;"></b> jika skor atau form dinilai belum layak naik jarak.
-        </p>
-        <form method="POST">
-            <input type="hidden" name="action" value="reject">
-            <input type="hidden" name="session_id" id="rejSessionId">
-            <div class="form-group" style="text-align: left;">
-                <label class="form-label">Alasan Penolakan / Evaluasi Pengulangan:</label>
-                <textarea class="form-control" name="admin_notes" rows="2" placeholder="Alasan penolakan..." required>Skor belum memenuhi passing score minimal. Dimohon melakukan latihan repetisi 2 pekan ke depan.</textarea>
+<!-- MODAL TOLAK UJIAN (BOOTSTRAP CENTERED MODAL) -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-secondary" style="background: #111827; color: #f8fafc;">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2">
+                    ❌ Tolak Pengesahan Ujian
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
-                <button type="button" class="btn btn-secondary btn-block" onclick="closeApprovalModals()">Batal</button>
-                <button type="submit" class="btn btn-primary btn-block" style="background: var(--danger); border-color: var(--danger);">❌ Tolak</button>
-            </div>
-        </form>
+            <form method="POST">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="action" value="reject">
+                    <input type="hidden" name="session_id" id="rejSessionId">
+                    <p class="small text-muted mb-3">
+                        Tolak pengesahan ujian untuk ananda <strong class="text-white" id="rejArcherName"></strong> jika skor atau form dinilai belum layak naik jarak.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white">Alasan Penolakan / Evaluasi Pengulangan:</label>
+                        <textarea class="form-control bg-dark text-white border-secondary" name="admin_notes" rows="2" placeholder="Alasan penolakan..." required>Skor belum memenuhi passing score minimal. Dimohon melakukan latihan repetisi 2 pekan ke depan.</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4">❌ Tolak</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 <script>
+let approveModalInst = null;
+let rejectModalInst = null;
+
 function openApproveModal(sessionId, name, fromDist, score) {
     document.getElementById('appSessionId').value = sessionId;
     document.getElementById('appArcherName').textContent = name;
     document.getElementById('appFromDist').textContent = fromDist;
     document.getElementById('appScore').textContent = score;
-    document.getElementById('approveModal').style.display = 'flex';
+    if (!approveModalInst) {
+        approveModalInst = new bootstrap.Modal(document.getElementById('approveModal'));
+    }
+    approveModalInst.show();
 }
 
 function openRejectModal(sessionId, name) {
     document.getElementById('rejSessionId').value = sessionId;
     document.getElementById('rejArcherName').textContent = name;
-    document.getElementById('rejectModal').style.display = 'flex';
-}
-
-function closeApprovalModals() {
-    document.getElementById('approveModal').style.display = 'none';
-    document.getElementById('rejectModal').style.display = 'none';
+    if (!rejectModalInst) {
+        rejectModalInst = new bootstrap.Modal(document.getElementById('rejectModal'));
+    }
+    rejectModalInst.show();
 }
 </script>
 

@@ -25,28 +25,61 @@ if (!$data || !isset($data['session_id'])) {
 }
 
 $sessionId = (int)$data['session_id'];
-$notesTechnique = htmlspecialchars(trim($data['coach_notes_technique'] ?? ''), ENT_QUOTES, 'UTF-8');
-$notesMental = htmlspecialchars(trim($data['coach_notes_mental'] ?? ''), ENT_QUOTES, 'UTF-8');
-$recommendation = htmlspecialchars(trim($data['coach_recommendation'] ?? ''), ENT_QUOTES, 'UTF-8');
+
+// Cek apakah payload menyertakan data evaluasi coach
+$hasCoachNotes = isset($data['coach_notes_technique']) || isset($data['coach_notes_mental']) || isset($data['coach_recommendation']) || isset($data['evaluation_checklist_json']);
 $status = ($data['mark_completed'] ?? false) ? 'completed' : 'in_progress';
 
 try {
-    $stmt = $pdo->prepare("
-        UPDATE archery_sessions SET
-            coach_notes_technique = :tech,
-            coach_notes_mental = :mental,
-            coach_recommendation = :recom,
-            status = :status,
-            end_time = CURTIME()
-        WHERE id = :id
-    ");
-    $stmt->execute([
-        ':tech' => $notesTechnique,
-        ':mental' => $notesMental,
-        ':recom' => $recommendation,
-        ':status' => $status,
-        ':id' => $sessionId
-    ]);
+    if ($hasCoachNotes) {
+        $notesTechnique = htmlspecialchars(trim($data['coach_notes_technique'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $notesMental = htmlspecialchars(trim($data['coach_notes_mental'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $recommendation = htmlspecialchars(trim($data['coach_recommendation'] ?? ''), ENT_QUOTES, 'UTF-8');
+        
+        $checklistJson = null;
+        if (isset($data['evaluation_checklist_json'])) {
+            $checklistJson = is_string($data['evaluation_checklist_json']) 
+                ? $data['evaluation_checklist_json'] 
+                : json_encode($data['evaluation_checklist_json'], JSON_UNESCAPED_UNICODE);
+        }
+        $checklistScore = isset($data['evaluation_checklist_score']) ? (int)$data['evaluation_checklist_score'] : null;
+        $checklistMax = isset($data['evaluation_max_score']) ? (int)$data['evaluation_max_score'] : null;
+
+        $stmt = $pdo->prepare("
+            UPDATE archery_sessions SET
+                coach_notes_technique = :tech,
+                coach_notes_mental = :mental,
+                coach_recommendation = :recom,
+                evaluation_checklist_json = :chk,
+                evaluation_checklist_score = :chk_sc,
+                evaluation_max_score = :chk_mx,
+                status = :status,
+                end_time = CURTIME()
+            WHERE id = :id
+        ");
+        $stmt->execute([
+            ':tech' => $notesTechnique,
+            ':mental' => $notesMental,
+            ':recom' => $recommendation,
+            ':chk' => $checklistJson,
+            ':chk_sc' => $checklistScore,
+            ':chk_mx' => $checklistMax,
+            ':status' => $status,
+            ':id' => $sessionId
+        ]);
+    } else {
+        // Hanya finalisasi status selesai tanpa menimpa catatan coach yang sudah ada
+        $stmt = $pdo->prepare("
+            UPDATE archery_sessions SET
+                status = :status,
+                end_time = CURTIME()
+            WHERE id = :id
+        ");
+        $stmt->execute([
+            ':status' => $status,
+            ':id' => $sessionId
+        ]);
+    }
 
     // Update Personal Best jika rekor baru
     $stmtCheckPB = $pdo->prepare("

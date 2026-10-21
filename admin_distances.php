@@ -206,61 +206,75 @@ require_once __DIR__ . '/views/header.php';
     </div>
 </main>
 
-<!-- MODAL ADD / EDIT DISTANCE -->
-<div id="distanceModal" class="login-modal-overlay" style="display: none;">
-    <div class="login-error-modal" style="max-width: 520px; text-align: left;">
-        <h3 id="modalTitle" style="margin-top: 0; color: var(--primary);">➕ Tambah Jarak Tembak Baru</h3>
-        
-        <form method="POST">
-            <input type="hidden" name="action" value="save_distance">
-            <input type="hidden" name="distance_id" id="distId" value="0">
+<!-- MODAL ADD / EDIT DISTANCE (BOOTSTRAP CENTERED MODAL) -->
+<div class="modal fade" id="distanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-secondary" style="background: #111827; color: #f8fafc;">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-warning d-flex align-items-center gap-2" id="modalTitle">
+                    ➕ Tambah Jarak Tembak Baru
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="action" value="save_distance">
+                    <input type="hidden" name="distance_id" id="distId" value="0">
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                <div class="form-group">
-                    <label class="form-label">Jarak (Angka Meter):</label>
-                    <input type="number" class="form-control" name="distance_meter" id="distMeter" required placeholder="cth: 5">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-white">Jarak (Meter) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control bg-dark text-white border-secondary" name="distance_meter" id="distMeter" required placeholder="cth: 5">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-white">Min. Passing Score <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control bg-dark text-white border-secondary" name="min_passing_score" id="distMinScore" required placeholder="cth: 240">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white">Label Tingkatan Jarak <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control bg-dark text-white border-secondary" name="distance_label" id="distLabel" required placeholder="cth: Jarak 5 Meter (Dasar Pemula)">
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-white">Min. Sesi Latihan</label>
+                            <input type="number" class="form-control bg-dark text-white border-secondary" name="min_sessions_required" id="distMinSessions" value="12" required>
+                            <span class="small text-muted" style="font-size: 0.72rem;">Jam terbang minimal.</span>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-white">Estimasi Bulan</label>
+                            <input type="number" class="form-control bg-dark text-white border-secondary" name="min_months_required" id="distMinMonths" value="2" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white">Keterangan / Fokus Penilaian:</label>
+                        <input type="text" class="form-control bg-dark text-white border-secondary" name="description" id="distDesc" placeholder="cth: Fokus anchor point konsisten & follow-through">
+                    </div>
                 </div>
-
-                <div class="form-group">
-                    <label class="form-label">Min. Passing Score (/300):</label>
-                    <input type="number" class="form-control" name="min_passing_score" id="distMinScore" required placeholder="cth: 240">
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">💾 Simpan Jarak</button>
                 </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Label Tingkatan Jarak:</label>
-                <input type="text" class="form-control" name="distance_label" id="distLabel" required placeholder="cth: Jarak 5 Meter (Dasar Pemula)">
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                <div class="form-group">
-                    <label class="form-label">Min. Sesi Latihan:</label>
-                    <input type="number" class="form-control" name="min_sessions_required" id="distMinSessions" value="12" required>
-                    <span style="font-size: 0.72rem; color: var(--text-dim);">Flight hours minimal sebelum ujian terbuka.</span>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Estimasi Bulan:</label>
-                    <input type="number" class="form-control" name="min_months_required" id="distMinMonths" value="2" required>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Keterangan / Fokus Penilaian:</label>
-                <input type="text" class="form-control" name="description" id="distDesc" placeholder="cth: Fokus anchor point konsisten & follow-through">
-            </div>
-
-            <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
-                <button type="button" class="btn btn-secondary btn-block" onclick="closeDistanceModal()">Batal</button>
-                <button type="submit" class="btn btn-primary btn-block">💾 Simpan Jarak</button>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
 
 <script>
+let distModalInst = null;
+
+function getDistModal() {
+    if (!distModalInst) {
+        distModalInst = new bootstrap.Modal(document.getElementById('distanceModal'));
+    }
+    return distModalInst;
+}
+
 function openAddDistanceModal() {
-    document.getElementById('modalTitle').textContent = '➕ Tambah Jarak Tembak Baru';
+    document.getElementById('modalTitle').innerHTML = '➕ Tambah Jarak Tembak Baru';
     document.getElementById('distId').value = '0';
     document.getElementById('distMeter').value = '';
     document.getElementById('distLabel').value = '';
@@ -268,11 +282,11 @@ function openAddDistanceModal() {
     document.getElementById('distMinMonths').value = '2';
     document.getElementById('distMinScore').value = '250';
     document.getElementById('distDesc').value = '';
-    document.getElementById('distanceModal').style.display = 'flex';
+    getDistModal().show();
 }
 
 function openEditModal(d) {
-    document.getElementById('modalTitle').textContent = '✏️ Edit Jarak ' + d.distance_meter + ' Meter';
+    document.getElementById('modalTitle').innerHTML = '✏️ Edit Jarak ' + d.distance_meter + ' Meter';
     document.getElementById('distId').value = d.id;
     document.getElementById('distMeter').value = d.distance_meter;
     document.getElementById('distLabel').value = d.distance_label;
@@ -280,11 +294,7 @@ function openEditModal(d) {
     document.getElementById('distMinMonths').value = d.min_months_required;
     document.getElementById('distMinScore').value = d.min_passing_score;
     document.getElementById('distDesc').value = d.description || '';
-    document.getElementById('distanceModal').style.display = 'flex';
-}
-
-function closeDistanceModal() {
-    document.getElementById('distanceModal').style.display = 'none';
+    getDistModal().show();
 }
 </script>
 

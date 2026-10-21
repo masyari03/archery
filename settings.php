@@ -196,6 +196,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $alertMsg = "Gagal menyimpan format sesi: " . $e->getMessage();
             $alertType = 'danger';
         }
+    } elseif ($action === 'save_criterion') {
+        $critId = (int)($_POST['criterion_id'] ?? 0);
+        $category = trim($_POST['category'] ?? 'Form & Teknik');
+        $title = trim($_POST['title'] ?? '');
+        $points = max(1, (int)($_POST['points'] ?? 10));
+        $sortOrder = (int)($_POST['sort_order'] ?? 0);
+
+        if (!empty($title)) {
+            try {
+                if ($critId > 0) {
+                    $stmtCrit = $pdo->prepare("UPDATE archery_eval_criteria SET category = :cat, title = :tit, points = :pts, sort_order = :ord WHERE id = :id AND club_id = :cid");
+                    $stmtCrit->execute([':cat' => $category, ':tit' => $title, ':pts' => $points, ':ord' => $sortOrder, ':id' => $critId, ':cid' => $clubId]);
+                    $alertMsg = "✔ Kriteria rubrik evaluasi berhasil diperbarui!";
+                } else {
+                    $stmtCrit = $pdo->prepare("INSERT INTO archery_eval_criteria (club_id, category, title, points, sort_order, is_active) VALUES (:cid, :cat, :tit, :pts, :ord, 1)");
+                    $stmtCrit->execute([':cid' => $clubId, ':cat' => $category, ':tit' => $title, ':pts' => $points, ':ord' => $sortOrder]);
+                    $alertMsg = "✔ Kriteria rubrik evaluasi baru berhasil ditambahkan!";
+                }
+            } catch (PDOException $e) {
+                $alertMsg = "Gagal menyimpan kriteria: " . $e->getMessage();
+                $alertType = 'danger';
+            }
+        }
+    } elseif ($action === 'toggle_criterion') {
+        $critId = (int)($_POST['criterion_id'] ?? 0);
+        $isActive = (int)($_POST['is_active'] ?? 1);
+        try {
+            $stmtTog = $pdo->prepare("UPDATE archery_eval_criteria SET is_active = :act WHERE id = :id AND club_id = :cid");
+            $stmtTog->execute([':act' => $isActive, ':id' => $critId, ':cid' => $clubId]);
+            $alertMsg = "✔ Status kriteria berhasil diubah!";
+        } catch (PDOException $e) {
+            $alertMsg = "Gagal mengubah status: " . $e->getMessage();
+            $alertType = 'danger';
+        }
+    } elseif ($action === 'delete_criterion') {
+        $critId = (int)($_POST['criterion_id'] ?? 0);
+        try {
+            $stmtDel = $pdo->prepare("DELETE FROM archery_eval_criteria WHERE id = :id AND club_id = :cid");
+            $stmtDel->execute([':id' => $critId, ':cid' => $clubId]);
+            $alertMsg = "✔ Kriteria berhasil dihapus.";
+        } catch (PDOException $e) {
+            $alertMsg = "Gagal menghapus kriteria: " . $e->getMessage();
+            $alertType = 'danger';
+        }
     }
 }
 
@@ -206,6 +250,16 @@ $club = $stmtClub->fetch();
 
 if (!$club) {
     die("Klub tidak ditemukan.");
+}
+
+// Ambil Kriteria Rubrik Evaluasi Klub
+$stmtClubCrit = $pdo->prepare("SELECT * FROM archery_eval_criteria WHERE club_id = :cid ORDER BY sort_order ASC, id ASC");
+$stmtClubCrit->execute([':cid' => $clubId]);
+$clubCriteriaList = $stmtClubCrit->fetchAll();
+if (empty($clubCriteriaList)) {
+    // Tampilkan template default jika belum ada
+    $stmtClubCrit = $pdo->query("SELECT * FROM archery_eval_criteria WHERE is_active = 1 ORDER BY sort_order ASC, id ASC");
+    $clubCriteriaList = $stmtClubCrit->fetchAll();
 }
 $pageTitle = "Pengaturan Klub & Sistem - TARGET ARCHERY";
 require_once __DIR__ . '/views/header.php';
@@ -292,6 +346,9 @@ require_once __DIR__ . '/views/header.php';
         </button>
         <button type="button" class="tab-btn" onclick="switchSettingsTab('sessionFormatTab', this)">
             🏹 Format Sesi &amp; Seri Panahan
+        </button>
+        <button type="button" class="tab-btn" onclick="switchSettingsTab('rubricTab', this)">
+            📋 Rubrik Evaluasi Atlet
         </button>
         <button type="button" class="tab-btn" onclick="switchSettingsTab('fonnteTab', this)">
             🤖 WhatsApp Bot (Fonnte)
@@ -605,9 +662,160 @@ require_once __DIR__ . '/views/header.php';
             </div>
         </div>
     </div>
+    <!-- TAB 5: RUBRIK EVALUASI ATLET -->
+    <div id="rubricTab" class="settings-tab-content" style="display: none;">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h2 class="card-title mb-1">📋 Rubrik &amp; Kriteria Evaluasi Capaian Atlet</h2>
+                    <p class="small text-muted mb-0">Kelola daftar checklist keterampilan yang digunakan oleh Coach saat mengevaluasi sesi latihan atlet.</p>
+                </div>
+                <button type="button" class="btn btn-warning fw-bold text-dark btn-sm shadow-sm" onclick="openAddCriterionModal()">
+                    ➕ Tambah Kriteria Baru
+                </button>
+            </div>
+
+            <div class="table-responsive mt-3">
+                <table class="table table-dark table-hover border-secondary align-middle">
+                    <thead>
+                        <tr class="text-secondary small">
+                            <th>Kategori</th>
+                            <th>Kriteria Penilaian</th>
+                            <th class="text-center">Bobot Poin</th>
+                            <th class="text-center">Urutan</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($clubCriteriaList)): ?>
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">Belum ada rubrik kriteria evaluasi. Silakan tambah kriteria baru.</td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($clubCriteriaList as $cr): ?>
+                                <tr>
+                                    <td><span class="badge bg-secondary"><?= htmlspecialchars($cr['category']) ?></span></td>
+                                    <td><strong class="text-white"><?= htmlspecialchars($cr['title']) ?></strong></td>
+                                    <td class="text-center"><span class="badge bg-info text-dark fw-bold">+<?= (int)$cr['points'] ?> pt</span></td>
+                                    <td class="text-center text-muted"><?= (int)$cr['sort_order'] ?></td>
+                                    <td class="text-center">
+                                        <?php if (!empty($cr['is_active'])): ?>
+                                            <span class="badge bg-success">Aktif</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">Non-Aktif</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-info" onclick='openEditCriterionModal(<?= json_encode($cr) ?>)' title="Edit Kriteria">
+                                                ✏️
+                                            </button>
+                                            <form method="POST" style="display:inline;" onsubmit="return confirm('Ubah status aktif kriteria ini?')">
+                                                <input type="hidden" name="action" value="toggle_criterion">
+                                                <input type="hidden" name="criterion_id" value="<?= $cr['id'] ?>">
+                                                <input type="hidden" name="is_active" value="<?= !empty($cr['is_active']) ? 0 : 1 ?>">
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Toggle Aktif/Nonaktif">
+                                                    <?= !empty($cr['is_active']) ? '⏸️' : '▶️' ?>
+                                                </button>
+                                            </form>
+                                            <form method="POST" style="display:inline;" onsubmit="return confirm('Hapus kriteria ini secara permanen?')">
+                                                <input type="hidden" name="action" value="delete_criterion">
+                                                <input type="hidden" name="criterion_id" value="<?= $cr['id'] ?>">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus">
+                                                    🗑️
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </main>
 
+<!-- MODAL ADD / EDIT EVALUATION CRITERION (BOOTSTRAP CENTERED MODAL) -->
+<div class="modal fade" id="criterionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-secondary" style="background: #111827; color: #f8fafc;">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-warning d-flex align-items-center gap-2" id="critModalTitle">
+                    ➕ Tambah Kriteria Rubrik Baru
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="action" value="save_criterion">
+                    <input type="hidden" name="criterion_id" id="critId" value="0">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white">Kategori Rubrik <span class="text-danger">*</span></label>
+                        <select class="form-select bg-dark text-white border-secondary" name="category" id="critCategory" required>
+                            <option value="Form &amp; Teknik">1. Form &amp; Teknik (Stance, Anchor, Release)</option>
+                            <option value="Mental &amp; Fokus">2. Mental &amp; Fokus Atlet</option>
+                            <option value="Kedisiplinan &amp; Keselamatan">3. Kedisiplinan &amp; Standar Keselamatan</option>
+                            <option value="Fisik &amp; Daya Tahan">4. Fisik &amp; Daya Tahan</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white">Judul Indikator / Kriteria Penilaian <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control bg-dark text-white border-secondary" name="title" id="critTitle" required placeholder="Contoh: Konsistensi Posisi Anchor Point">
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-white">Bobot Poin (+pt) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control bg-dark text-white border-secondary" name="points" id="critPoints" value="10" min="1" max="100" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-white">Urutan Tampil</label>
+                            <input type="number" class="form-control bg-dark text-white border-secondary" name="sort_order" id="critSortOrder" value="0" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">💾 Simpan Kriteria</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
+let critModalInst = null;
+function getCritModal() {
+    if (!critModalInst) {
+        critModalInst = new bootstrap.Modal(document.getElementById('criterionModal'));
+    }
+    return critModalInst;
+}
+
+function openAddCriterionModal() {
+    document.getElementById('critModalTitle').innerHTML = '➕ Tambah Kriteria Rubrik Baru';
+    document.getElementById('critId').value = '0';
+    document.getElementById('critTitle').value = '';
+    document.getElementById('critPoints').value = '10';
+    document.getElementById('critSortOrder').value = '0';
+    getCritModal().show();
+}
+
+function openEditCriterionModal(c) {
+    document.getElementById('critModalTitle').innerHTML = '✏️ Edit Kriteria Rubrik';
+    document.getElementById('critId').value = c.id;
+    document.getElementById('critCategory').value = c.category;
+    document.getElementById('critTitle').value = c.title;
+    document.getElementById('critPoints').value = c.points;
+    document.getElementById('critSortOrder').value = c.sort_order;
+    getCritModal().show();
+}
+
 function switchSettingsTab(tabId, btn) {
     document.querySelectorAll('.settings-tab-content').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));

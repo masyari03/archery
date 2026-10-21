@@ -229,14 +229,19 @@ require_once __DIR__ . '/views/header.php';
 
             <!-- SERI CONTROLS & ARROW SLOTS -->
             <div style="width: 100%; margin-top: 1.25rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Panah Seri Ini:</span>
                         <div id="arrowSlots" style="display: flex; gap: 5px;"></div>
                     </div>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="plotter.undoLastArrow()" title="Hapus Panah Terakhir">
-                        ↩️ Undo Panah
-                    </button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-2" onclick="plotter.inputMiss()" title="Input Tembakan Meleset / Keluar Sasaran (Skor 0)">
+                            ❌ Input MISS (0)
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="plotter.undoLastArrow()" title="Hapus Panah Terakhir">
+                            ↩️ Undo Panah
+                        </button>
+                    </div>
                 </div>
 
                 <!-- END SELECTOR BAR -->
@@ -314,45 +319,39 @@ require_once __DIR__ . '/views/header.php';
                 </div>
             </div>
 
-            <!-- FORM EVALUASI COACH DI SETIAP SESI (TERKUNCI HINGGA 6 SERI LENGKAP) -->
-            <div id="coachEvalSection" class="card" style="display: none;">
-                <div class="card-header">
-                    <h3 class="card-title" style="display: flex; align-items: center; justify-content: space-between;">
-                        <span>👨‍🏫 Evaluasi Pelatih di Sesi Ini</span>
-                        <span class="badge badge-success" style="font-size: 0.75rem;">6 Seri Selesai</span>
-                    </h3>
+            <!-- CARD SELESAI SELURUH SERI (ATLET / ORANG TUA HANYA SIMPAN NILAI) -->
+            <div id="coachEvalSection" class="card" style="display: none; border-left: 4px solid #10b981; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(15, 23, 42, 0.95)); padding: 1.25rem;">
+                <div style="display: flex; gap: 0.85rem; align-items: flex-start;">
+                    <div style="font-size: 2.2rem;">🏆</div>
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 0.35rem 0; font-size: 1.05rem; font-weight: 700; color: #10b981;">
+                            Alhamdulillah, Seluruh Seri Selesai!
+                        </h4>
+                        <p style="margin: 0 0 0.75rem 0; font-size: 0.82rem; color: #cbd5e1; line-height: 1.45;">
+                            Semua tembakan ananda telah tercatat otomatis. Nilai tersimpan aman dan sesi ini masuk ke daftar pantau <b>Coach <?= htmlspecialchars($session['coach_name'] ?? 'Pelatih') ?></b> untuk dinilai.
+                        </p>
+                        
+                        <div class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size: 0.78rem; border-left: 3px solid #f59e0b; background: rgba(245, 158, 11, 0.12); color: #fde68a;">
+                            <i class="bi bi-lock-fill text-warning"></i>
+                            <div>Lembar Rapot Sesi A4 terkunci hingga Coach memberikan evaluasi teknik &amp; rubrik capaian.</div>
+                        </div>
+
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-success btn-sm fw-bold px-3 shadow-sm" onclick="finalizeSessionOnly()">
+                                💾 Selesaikan &amp; Kembali ke Dashboard
+                            </button>
+                            <a href="share_card.php?session_id=<?= $session['id'] ?>" class="btn btn-outline-info btn-sm fw-bold">
+                                📱 Share Card Medsos
+                            </a>
+                        </div>
+                    </div>
                 </div>
-                <form id="coachEvalForm" onsubmit="saveCoachEvaluation(event)">
-                    <div class="form-group">
-                        <label class="form-label">1. Evaluasi Form & Teknik (Stance, Anchor, Release)</label>
-                        <textarea class="form-control" name="coach_notes_technique" id="coachTechnique" rows="2" placeholder="Contoh: Tarikan siku konsisten, perbaiki rilis agar tidak menyentak..."><?= htmlspecialchars($session['coach_notes_technique'] ?? '') ?></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">2. Evaluasi Mental & Fokus</label>
-                        <input type="text" class="form-control" name="coach_notes_mental" id="coachMental" value="<?= htmlspecialchars($session['coach_notes_mental'] ?? '') ?>" placeholder="Contoh: Sangat tenang saat tembakan terakhir">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">3. Rekomendasi / PR Latihan di Rumah</label>
-                        <input type="text" class="form-control" name="coach_recommendation" id="coachRecom" value="<?= htmlspecialchars($session['coach_recommendation'] ?? '') ?>" placeholder="Contoh: Latihan SPT 15 menit setiap pagi">
-                    </div>
-
-                    <div style="display: flex; gap: 0.75rem;">
-                        <button type="submit" class="btn btn-secondary btn-block">
-                            💾 Simpan Catatan
-                        </button>
-                        <button type="button" class="btn btn-primary btn-block" onclick="finishAndPrintReport()">
-                            ✅ Selesai & Cetak Rapot ➔
-                        </button>
-                    </div>
-                </form>
             </div>
         </div>
     </div>
 </main>
 
-<script src="assets/js/target_plotter.js"></script>
+<script src="assets/js/target_plotter.js?v=<?= filemtime(__DIR__ . '/assets/js/target_plotter.js') ?>"></script>
 <script>
 const plotter = new ArcheryPlotter('targetCanvas', 'magnifierLoupe', {
     sessionId: <?= (int)$session['id'] ?>,
@@ -380,41 +379,25 @@ function switchEndNumber(num) {
     if (targetBtn) targetBtn.classList.add('active');
 }
 
-function saveCoachEvaluation(e, markCompleted = false) {
-    if (e) e.preventDefault();
-
-    const payload = {
-        session_id: <?= (int)$session['id'] ?>,
-        coach_notes_technique: document.getElementById('coachTechnique').value,
-        coach_notes_mental: document.getElementById('coachMental').value,
-        coach_recommendation: document.getElementById('coachRecom').value,
-        mark_completed: markCompleted
-    };
-
+function finalizeSessionOnly() {
     fetch('api/save_session.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+            session_id: <?= (int)$session['id'] ?>,
+            mark_completed: true
+        })
     })
     .then(r => r.json())
     .then(res => {
         if (res.status === 'success') {
-            if (markCompleted) {
-                window.location.href = 'report_session.php?session_id=<?= (int)$session['id'] ?>';
-            } else {
-                alert('✔ Catatan evaluasi coach berhasil disimpan!');
-            }
+            alert('✔ Sesi latihan selesai dan tersimpan rapi!');
+            window.location.href = '<?= (in_array($_SESSION['role'] ?? '', ['coach', 'super_admin'])) ? "coach_dashboard.php" : "app_dashboard.php" ?>';
         } else {
-            alert('Gagal simpan evaluasi: ' + res.message);
+            alert('Gagal menyelesaikan sesi: ' + res.message);
         }
     })
-    .catch(() => alert('Terjadi gangguan jaringan saat menyimpan catatan coach'));
-}
-
-function finishAndPrintReport() {
-    if (confirm('Tandai sesi latihan ini selesai dan cetak rapot resmi?')) {
-        saveCoachEvaluation(null, true);
-    }
+    .catch(() => alert('Terjadi gangguan jaringan saat menyimpan sesi.'));
 }
 </script>
 

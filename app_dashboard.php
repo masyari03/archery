@@ -81,13 +81,13 @@ $canTakeExam = ($isEligibleBySessions || $isCoachApproved);
 
 $progressPct = min(100, round(($totalSessionsCount / max(1, $minSessionsRequired)) * 100));
 
-// Ambil Daftar Coach Aktif untuk Dropdown Modal
-$stmtCoaches = $pdo->prepare("SELECT id, full_name FROM archery_users WHERE role IN ('coach', 'super_admin') AND is_active = 1 AND club_id = :cid ORDER BY full_name ASC");
+// Ambil Daftar Coach Aktif untuk Dropdown Modal (Khusus role coach, tanpa super admin)
+$stmtCoaches = $pdo->prepare("SELECT id, full_name FROM archery_users WHERE role = 'coach' AND is_active = 1 AND club_id = :cid ORDER BY full_name ASC");
 $stmtCoaches->execute([':cid' => $currentArcher['club_id']]);
 $coachesList = $stmtCoaches->fetchAll();
 if (empty($coachesList)) {
     // Fallback jika tidak ada coach spesifik klub
-    $stmtCoaches = $pdo->query("SELECT id, full_name FROM archery_users WHERE role IN ('coach', 'super_admin') AND is_active = 1 ORDER BY full_name ASC");
+    $stmtCoaches = $pdo->query("SELECT id, full_name FROM archery_users WHERE role = 'coach' AND is_active = 1 ORDER BY full_name ASC");
     $coachesList = $stmtCoaches->fetchAll();
 }
 
@@ -174,6 +174,95 @@ require_once __DIR__ . '/views/header.php';
                     </div>
                 <?php endif; ?>
             </div>
+        </div>
+    <!-- 🔑 Akses Scoring Mandiri Atlet di Lapangan (PIN Dinamis 5 Jam) -->
+    <?php
+    $isPinActive = (!empty($currentArcher['temp_field_pin']) && !empty($currentArcher['temp_field_pin_expires_at']) && strtotime($currentArcher['temp_field_pin_expires_at']) > time());
+    $pinExpiresTs = $isPinActive ? strtotime($currentArcher['temp_field_pin_expires_at']) : 0;
+    $pinRemainingSecs = $isPinActive ? max(0, $pinExpiresTs - time()) : 0;
+    $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $portalUrl = $scheme . '://' . $host . '/pin_login.php';
+    $childShortName = htmlspecialchars($currentArcher['nickname'] ?: $currentArcher['full_name']);
+    $waText = "Assalamu'alaikum {$childShortName}, ini PIN scoring latihan mandiri kamu: " . ($currentArcher['temp_field_pin'] ?? '') . ". Masukkan NIS {$currentArcher['nis']} dan PIN tersebut di: {$portalUrl} (Aktif 5 jam). Semangat memanah!";
+    $waShareUrl = "https://wa.me/?text=" . urlencode($waText);
+    ?>
+    <div class="card mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(56, 189, 248, 0.3) !important;">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center bg-info bg-opacity-25 text-info" style="width: 50px; height: 50px; font-size: 24px;">
+                        <i class="bi bi-key-fill"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <h5 class="mb-0 fw-bold text-white">Akses Scoring Mandiri di Lapangan</h5>
+                            <?php if ($isPinActive): ?>
+                                <span class="badge bg-success bg-opacity-25 text-success border border-success"><i class="bi bi-shield-check"></i> PIN AKTIF (5 JAM)</span>
+                            <?php else: ?>
+                                <span class="badge bg-secondary bg-opacity-50 text-light"><i class="bi bi-shield-lock"></i> PIN KEDALUWARSA / BELUM DIBUAT</span>
+                            <?php endif; ?>
+                        </div>
+                        <p class="text-muted small mb-0 mt-1">
+                            Berikan PIN ini kepada ananda agar bisa menginput skor di HP sendiri di lapangan tanpa memegang akun orang tua.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <?php if ($isPinActive): ?>
+                        <div class="px-3 py-1 rounded bg-dark border border-info d-flex align-items-center gap-2">
+                            <span class="small text-muted">PIN:</span>
+                            <span class="fs-4 fw-bold text-info font-monospace" style="letter-spacing: 4px;"><?= htmlspecialchars($currentArcher['temp_field_pin']) ?></span>
+                        </div>
+                        <a href="<?= $waShareUrl ?>" target="_blank" rel="noopener" class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1">
+                            <i class="bi bi-whatsapp"></i> Kirim ke WA Anak
+                        </a>
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="generateFieldPin(<?= $archerId ?>)" title="Generate Ulang PIN Baru">
+                            <i class="bi bi-arrow-clockwise"></i> Ganti PIN
+                        </button>
+                    <?php else: ?>
+                        <button type="button" class="btn btn-info fw-bold text-dark px-3 py-2 shadow-sm d-flex align-items-center gap-2" onclick="generateFieldPin(<?= $archerId ?>)">
+                            <i class="bi bi-shield-plus fs-6"></i> Buat PIN 5 Jam Sekarang
+                        </button>
+                    <?php endif; ?>
+                    <a href="pin_login.php" target="_blank" class="btn btn-sm btn-outline-secondary text-light d-flex align-items-center gap-1" title="Lihat Tampilan Layar HP Anak">
+                        <i class="bi bi-box-arrow-up-right"></i> Buka Portal Lapangan
+                    </a>
+                </div>
+            </div>
+
+            <?php if ($isPinActive): ?>
+                <div class="mt-3 pt-2 border-top border-secondary border-opacity-25 d-flex flex-wrap justify-content-between align-items-center gap-2 small text-muted">
+                    <div>
+                        <i class="bi bi-clock-history text-warning"></i> Sisa Masa Berlaku: 
+                        <strong class="text-warning font-monospace" id="fieldPinCountdown">Menghitung...</strong>
+                        (Berakhir pk. <?= date('H:i', $pinExpiresTs) ?> WIB)
+                    </div>
+                    <div>
+                        <i class="bi bi-phone"></i> Ananda cukup login di <code>pin_login.php</code> dengan NIS: <strong class="text-white"><?= htmlspecialchars($currentArcher['nis']) ?></strong>
+                    </div>
+                </div>
+                <script>
+                (function() {
+                    let remaining = <?= (int)$pinRemainingSecs ?>;
+                    const el = document.getElementById('fieldPinCountdown');
+                    function update() {
+                        if (remaining <= 0) {
+                            if (el) el.innerHTML = '<span class="text-danger fw-bold">KEDALUWARSA (Silakan buat PIN baru)</span>';
+                            return;
+                        }
+                        const h = String(Math.floor(remaining / 3600)).padStart(2, '0');
+                        const m = String(Math.floor((remaining % 3600) / 60)).padStart(2, '0');
+                        const s = String(remaining % 60).padStart(2, '0');
+                        if (el) el.innerText = `${h}:${m}:${s}`;
+                        remaining--;
+                    }
+                    update();
+                    setInterval(update, 1000);
+                })();
+                </script>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -356,9 +445,11 @@ require_once __DIR__ . '/views/header.php';
                         <label class="form-label fw-bold">Pilih Coach Pendamping <span class="text-danger">*</span></label>
                         <select class="form-select bg-dark text-white border-secondary" name="coach_id" required>
                             <option value="">-- Pilih Coach yang Membimbing --</option>
-                            <?php foreach ($coachesList as $c): ?>
+                            <?php foreach ($coachesList as $c): 
+                                $cleanName = preg_replace('/^Coach\s+/i', '', trim($c['full_name']));
+                            ?>
                                 <option value="<?= $c['id'] ?>" <?= ($currentArcher['assigned_coach_id'] == $c['id']) ? 'selected' : '' ?>>
-                                    Coach <?= htmlspecialchars($c['full_name']) ?>
+                                    Coach <?= htmlspecialchars($cleanName) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -559,7 +650,23 @@ function submitDirectEval() {
             alert('Gagal: ' + res.message);
         }
     })
-    .catch(() => alert('Terjadi gangguan jaringan saat menyimpan evaluasi.'));
+function generateFieldPin(aid) {
+    if (!confirm('Buat PIN baru (6 digit, masa aktif 5 jam) untuk ananda di lapangan?')) return;
+    fetch('api/pin_auth.php?action=generate_pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archer_id: aid })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.status === 'success') {
+            alert('✔ PIN 5 Jam Berhasil Dibuat: ' + res.pin + '\n\nSilakan bagikan via WhatsApp kepada ananda!');
+            location.reload();
+        } else {
+            alert('Gagal: ' + res.message);
+        }
+    })
+    .catch(() => alert('Terjadi gangguan jaringan saat membuat PIN.'));
 }
 </script>
 

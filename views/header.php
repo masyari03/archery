@@ -63,6 +63,61 @@ if (isset($pdo)) {
             document.documentElement.setAttribute('data-bs-theme', savedTheme);
         })();
     </script>
+
+    <style>
+    /* Perbaikan Kontras Dropdown Option di Tema Gelap (Windows Chrome / Mobile) */
+    select.form-select option, 
+    select.form-control option, 
+    select option {
+        background-color: #111827 !important;
+        color: #f8fafc !important;
+        padding: 8px 12px;
+    }
+    select.form-select:focus,
+    select.form-control:focus {
+        border-color: #f59e0b !important;
+        box-shadow: 0 0 0 0.25rem rgba(245, 158, 11, 0.25) !important;
+    }
+
+    /* Standardisasi Global Modal Pop-up Terpusat (Anti Tulisan di Bawah) */
+    .login-modal-overlay,
+    .custom-modal-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(0, 0, 0, 0.82) !important;
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
+        z-index: 99999 !important;
+        display: none;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 1rem !important;
+    }
+    .login-error-modal,
+    .custom-modal-box {
+        background: #111827 !important;
+        border: 1px solid #374151 !important;
+        border-radius: 14px !important;
+        max-width: 540px !important;
+        width: 100% !important;
+        padding: 1.75rem !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85) !important;
+        color: #f8fafc !important;
+        position: relative !important;
+        max-height: 90vh !important;
+        overflow-y: auto !important;
+        animation: modalPopCenter 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    @keyframes modalPopCenter {
+        from { opacity: 0; transform: scale(0.92); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    </style>
 </head>
 <body>
 

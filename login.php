@@ -192,35 +192,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // 2. Login Perangkat Lapangan Atlet (Quick PIN)
+    // 2. Login Perangkat Lapangan Atlet (Dynamic 5-Hour Field PIN & Legacy PIN)
     if ($loginType === 'pin') {
         $pin = trim($_POST['access_pin'] ?? '');
-        if (!empty($pin)) {
-            $stmt = $pdo->prepare("SELECT * FROM archery_archers WHERE access_pin = :pin AND is_active = 1 LIMIT 1");
-            $stmt->execute([':pin' => $pin]);
+        $cleanPin = preg_replace('/[^0-9]/', '', $pin);
+        if (!empty($cleanPin)) {
+            $stmt = $pdo->prepare("
+                SELECT * FROM archery_archers 
+                WHERE ( (temp_field_pin = :p1 AND temp_field_pin_expires_at > NOW()) OR access_pin = :p2 )
+                  AND club_id = :cid
+                  AND is_active = 1 
+                LIMIT 1
+            ");
+            $stmt->execute([':p1' => $cleanPin, ':p2' => $cleanPin, ':cid' => $tenantId]);
             $archer = $stmt->fetch();
 
             if ($archer) {
-                // Strict multi-tenant check for PIN
-                if ((int)$archer['club_id'] !== $tenantId) {
-                    $error = 'PIN akses atlet ini terdaftar di klub lain. Silakan login di portal resmi klub yang sesuai.';
-                    ActivityLogger::log($pdo, $tenantId, (int)$archer['id'], $archer['nis'], 'archer', 'CROSS_TENANT_PIN_REJECTED', "PIN atlet ditolak karena berbeda klub");
-                    goto end_login_handler;
-                }
-
-                $_SESSION['archer_device_id'] = $archer['id'];
+                $_SESSION['user_id'] = 0;
+                $_SESSION['archer_device_id'] = (int)$archer['id'];
                 $_SESSION['role'] = 'archer';
+                $_SESSION['is_field_pin'] = true;
+                $_SESSION['pin_expires_at'] = !empty($archer['temp_field_pin_expires_at']) ? strtotime($archer['temp_field_pin_expires_at']) : (time() + 18000);
                 $_SESSION['full_name'] = $archer['full_name'];
-                $_SESSION['active_child_id'] = $archer['id'];
+                $_SESSION['active_child_id'] = (int)$archer['id'];
+                $_SESSION['archer_id'] = (int)$archer['id'];
                 $_SESSION['club_id'] = (int)$archer['club_id'];
 
                 ActivityLogger::recordSession($pdo, (int)$archer['id'], $archer['nis'], 'archer', (int)$archer['club_id']);
-                ActivityLogger::log($pdo, (int)$archer['club_id'], (int)$archer['id'], $archer['full_name'], 'archer', 'PIN_LOGIN', "Login perangkat scoring atlet");
+                ActivityLogger::log($pdo, (int)$archer['club_id'], (int)$archer['id'], $archer['full_name'], 'archer', 'PIN_LOGIN', "Login perangkat scoring atlet via PIN");
 
-                header('Location: app_dashboard.php');
+                header('Location: plotter.php');
                 exit;
             } else {
-                $error = 'PIN Akses Atlet Lapangan tidak ditemukan atau salah.';
+                $error = 'PIN Akses Lapangan tidak sesuai atau telah kadaluarsa (melewati batas 5 jam). Minta orang tua untuk menerbitkan PIN baru.';
             }
         } else {
             $error = 'Silakan masukkan 6-digit PIN anak.';

@@ -377,7 +377,13 @@ try {
     addColumnIfNotExists($pdo, 'archery_archers', 'can_exam_promotion', 'TINYINT(1) DEFAULT 0');
     addColumnIfNotExists($pdo, 'archery_archers', 'coach_exam_notes', 'TEXT DEFAULT NULL');
     addColumnIfNotExists($pdo, 'archery_archers', 'total_sessions_count', 'INT DEFAULT 0');
-    echo "✔ Tabel `archery_archers` siap dengan kolom modern.\n";
+    // Field Dynamic PIN (5 Hours Expiration & Anti-Brute-Force)
+    addColumnIfNotExists($pdo, 'archery_archers', 'temp_field_pin', 'VARCHAR(10) DEFAULT NULL');
+    addColumnIfNotExists($pdo, 'archery_archers', 'temp_field_pin_expires_at', 'DATETIME DEFAULT NULL');
+    addColumnIfNotExists($pdo, 'archery_archers', 'temp_field_pin_created_at', 'DATETIME DEFAULT NULL');
+    addColumnIfNotExists($pdo, 'archery_archers', 'failed_pin_attempts', 'INT DEFAULT 0');
+    addColumnIfNotExists($pdo, 'archery_archers', 'pin_lockout_until', 'DATETIME DEFAULT NULL');
+    echo "✔ Tabel `archery_archers` siap dengan kolom modern & PIN Lapangan 5 Jam.\n";
 
     // 6. Tabel archery_targets
     $pdo->exec("
@@ -427,7 +433,26 @@ try {
     addColumnIfNotExists($pdo, 'archery_sessions', 'exam_status', "ENUM('not_exam', 'pending_approval', 'approved', 'rejected') NOT NULL DEFAULT 'not_exam'");
     addColumnIfNotExists($pdo, 'archery_sessions', 'exam_reviewed_by', 'INT DEFAULT NULL');
     addColumnIfNotExists($pdo, 'archery_sessions', 'exam_reviewed_at', 'DATETIME DEFAULT NULL');
-    echo "✔ Tabel `archery_sessions` siap dengan kolom modern.\n";
+    addColumnIfNotExists($pdo, 'archery_sessions', 'evaluation_checklist_json', 'TEXT DEFAULT NULL');
+    addColumnIfNotExists($pdo, 'archery_sessions', 'evaluation_checklist_score', 'INT DEFAULT 0');
+    addColumnIfNotExists($pdo, 'archery_sessions', 'evaluation_max_score', 'INT DEFAULT 0');
+    echo "✔ Tabel `archery_sessions` siap dengan kolom modern & Rubrik Checklist Evaluasi.\n";
+
+    // 7b. Tabel archery_eval_criteria (Checklist Kriteria Evaluasi Dinamis Super Admin)
+    $pdo->exec("
+    CREATE TABLE IF NOT EXISTS `archery_eval_criteria` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `club_id` INT DEFAULT 1,
+        `category` VARCHAR(100) NOT NULL,
+        `title` VARCHAR(255) NOT NULL,
+        `points` INT DEFAULT 10,
+        `is_active` TINYINT(1) DEFAULT 1,
+        `sort_order` INT DEFAULT 1,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ");
+    echo "✔ Tabel `archery_eval_criteria` siap.\n";
 
     // 8. Tabel archery_ends
     $pdo->exec("
@@ -637,6 +662,41 @@ try {
         $stmtTarget->execute($t);
     }
     echo "✔ Master targets terisi.\n";
+
+    // Seed Kriteria Rubrik Evaluasi Atlet Standar World Archery
+    $evalCriteria = [
+        // Club 1 (An-Nahl)
+        [1, 'Sikap & Kuda-kuda (Stance)', 'Kuda-kuda seimbang & posisi kaki tegak lurus target', 10, 1],
+        [1, 'Sikap & Kuda-kuda (Stance)', 'Grip busur rileks dan sudut tangan 45 derajat tanpa mencengkeram', 10, 2],
+        [1, 'Tarikan & Kuncian (Draw & Anchor)', 'Tarikan siku sejajar panah dan konsisten di anchor point bawah dagu', 10, 3],
+        [1, 'Tarikan & Kuncian (Draw & Anchor)', 'Bahu bow-arm rendah, terkunci stabil, dan tidak terangkat', 10, 4],
+        [1, 'Rilis & Lanjutan (Release & Follow-Through)', 'Pelepasan jari rilis mengalir mulus ke belakang leher', 10, 5],
+        [1, 'Rilis & Lanjutan (Release & Follow-Through)', 'Follow-through busur dipertahankan stabil 2 detik pasca rilis', 10, 6],
+        [1, 'Fokus & Ritme Mental', 'Ritme pernafasan tenang & ekspansi tarikan konstan sebelum rilis', 10, 7],
+        [1, 'Fokus & Ritme Mental', 'Koreksi pisir & pengelompokan bidikan (grouping) terarah', 10, 8],
+        // Club 2 (Focus)
+        [2, 'Sikap & Kuda-kuda (Stance)', 'Kuda-kuda seimbang & postur tubuh tegak lurus', 10, 1],
+        [2, 'Tarikan & Kuncian (Draw & Anchor)', 'Konsistensi anchor point dan kestabilan bow-arm', 10, 2],
+        [2, 'Rilis & Lanjutan (Release & Follow-Through)', 'Rilis mulus dan follow-through busur terjaga', 10, 3],
+        [2, 'Fokus & Ritme Mental', 'Ketenangan mental saat eksekusi tembakan', 10, 4],
+        // Club 3 (Demo Sandbox)
+        [3, 'Sikap & Kuda-kuda (Stance)', 'Kuda-kuda seimbang & grip rileks', 10, 1],
+        [3, 'Tarikan & Kuncian (Draw & Anchor)', 'Anchor point konsisten', 10, 2],
+        [3, 'Rilis & Lanjutan (Release & Follow-Through)', 'Rilis mengalir alami', 10, 3],
+        [3, 'Fokus & Ritme Mental', 'Fokus bidikan stabil', 10, 4]
+    ];
+    $stmtEvalCr = $pdo->prepare("
+        INSERT INTO `archery_eval_criteria` (`club_id`, `category`, `title`, `points`, `sort_order`, `is_active`)
+        VALUES (?, ?, ?, ?, ?, 1)
+    ");
+    // Check if criteria already seeded to avoid duplicates
+    $cntCr = (int)$pdo->query("SELECT COUNT(*) FROM archery_eval_criteria")->fetchColumn();
+    if ($cntCr === 0) {
+        foreach ($evalCriteria as $ec) {
+            $stmtEvalCr->execute($ec);
+        }
+    }
+    echo "✔ Master kriteria rubrik evaluasi atlet terisi.\n";
 
     // Seed Pengaturan Master Admin SaaS
     $defaultWaReminderTpl = "🔔 *PENGINGAT PERPANJANGAN SEWA SAAS TARGET ARCHERY*\n\nYth. Admin Klub *{nama_klub}*,\n\nKami informasikan masa aktif langganan aplikasi Target Archery untuk klub Anda akan berakhir pada tanggal *{jatuh_tempo}* ({sisa_hari} hari lagi).\n\n📊 *Rincian Tagihan Periode {bulan}*:\n- Skema: {skema_tarif}\n- Total Atlet Terdaftar: {total_atlet} anak\n- Atlet Kena Tagihan: {atlet_bayar} anak\n- Atlet Bebas Biaya (Masuk setelah tgl 16): {atlet_gratis} anak\n- *Total Tagihan: Rp {total_tagihan}*\n\nSilakan lakukan pembayaran ke rekening Master Admin ({info_rekening}) agar layanan operasional klub tidak terputus.\n\nTerima kasih atas kemitraannya! 🎯";

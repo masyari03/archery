@@ -132,7 +132,7 @@ class ArcheryPlotter {
         this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
         this.displaySize = size;
         this.center = size / 2;
-        this.radiusTarget = size * 0.46; // 92% diameter target
+        this.radiusTarget = size * 0.38; // 76% diameter target: ruang bantalan (Miss Area) luas di sekelilingnya
     }
 
     updatePointFromPixel(pixelX, pixelY) {
@@ -284,6 +284,34 @@ class ArcheryPlotter {
         }
     }
 
+    inputMiss() {
+        if (this.isCurrentEndFull()) {
+            alert('Seri ' + this.currentEnd + ' sudah terisi penuh (' + this.arrowsPerEnd + ' panah). Silakan beralih ke seri berikutnya.');
+            return;
+        }
+        // Tempatkan anak panah miss secara realistis di area bantalan busa luar
+        const currentCount = (this.endsData[this.currentEnd] || []).length;
+        const angle = (currentCount * 1.35) + 0.6;
+        const missRadius = 1.18;
+        const normX = parseFloat((Math.cos(angle) * missRadius).toFixed(4));
+        const normY = parseFloat((Math.sin(angle) * missRadius).toFixed(4));
+
+        const missPoint = {
+            normX: normX,
+            normY: normY,
+            radius: missRadius,
+            score: 0,
+            is_x: 0,
+            pixelX: this.center + normX * this.radiusTarget,
+            pixelY: this.center + normY * this.radiusTarget
+        };
+
+        this.commitArrow(missPoint);
+        this.redraw();
+        this.saveToLocalStorage();
+        this.syncToServer();
+    }
+
     switchEnd(endNum) {
         if (endNum >= 1 && endNum <= this.totalEnds) {
             this.currentEnd = endNum;
@@ -295,6 +323,22 @@ class ArcheryPlotter {
     drawTargetFace(ctx) {
         const c = this.center;
         const R = this.radiusTarget;
+
+        // 1. Bantalan Target Busa (Foam target buttress) - Luas di luar lingkaran (Miss Area)
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, this.displaySize, this.displaySize);
+
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(6, 6, this.displaySize - 12, this.displaySize - 12);
+
+        // Label indikator Miss Area di sudut bantalan
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+        ctx.font = 'bold 9px Outfit, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('MISS (0) AREA', 14, 20);
+        ctx.textAlign = 'right';
+        ctx.fillText('MISS (0) AREA', this.displaySize - 14, 20);
 
         if (this.targetType === 'wa_6spot') {
             // Base background
@@ -517,13 +561,14 @@ class ArcheryPlotter {
         arrows.forEach((arr) => {
             const px = c + arr.x * R;
             const py = c + arr.y * R;
+            const isMiss = (arr.score === 0);
 
-            ctx.fillStyle = 'rgba(16, 185, 129, 0.4)';
+            ctx.fillStyle = isMiss ? 'rgba(239, 68, 68, 0.45)' : 'rgba(16, 185, 129, 0.4)';
             ctx.beginPath();
             ctx.arc(px, py, 11, 0, Math.PI * 2);
             ctx.fill();
 
-            ctx.fillStyle = '#10b981';
+            ctx.fillStyle = isMiss ? '#ef4444' : '#10b981';
             ctx.beginPath();
             ctx.arc(px, py, 6, 0, Math.PI * 2);
             ctx.fill();
@@ -535,7 +580,7 @@ class ArcheryPlotter {
             ctx.font = 'bold 8px Outfit, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(arr.arrow_num, px, py);
+            ctx.fillText(isMiss ? 'M' : arr.arrow_num, px, py);
         });
     }
 
