@@ -60,6 +60,9 @@ try {
     addColumnIfNotExists($pdo, 'archery_clubs', 'subdomain_slug', "VARCHAR(50) DEFAULT 'annahl'");
     addColumnIfNotExists($pdo, 'archery_clubs', 'custom_domain', "VARCHAR(150) DEFAULT NULL");
     addColumnIfNotExists($pdo, 'archery_clubs', 'favicon_url', "VARCHAR(255) DEFAULT 'assets/img/default_favicon.png'");
+    addColumnIfNotExists($pdo, 'archery_clubs', 'default_total_ends', "INT DEFAULT 6");
+    addColumnIfNotExists($pdo, 'archery_clubs', 'default_arrows_per_end', "INT DEFAULT 5");
+    addColumnIfNotExists($pdo, 'archery_clubs', 'default_target_id', "INT DEFAULT 4");
     echo "✔ Tabel `archery_clubs` siap dengan kolom modern & SaaS Domain Resolver.\n";
 
     // 3. Tabel archery_users (Update ENUM role with master_admin & 2FA Google TOTP)

@@ -18,6 +18,11 @@ if (!Auth::check()) {
 $archerId = (int)($_POST['archer_id'] ?? 0);
 $coachId = (int)($_POST['coach_id'] ?? 2);
 $sessionType = ($_POST['session_type'] ?? 'practice') === 'exam' ? 'exam' : 'practice';
+$totalEnds = max(1, min(24, (int)($_POST['total_ends'] ?? 6)));
+$arrowsPerEnd = max(1, min(12, (int)($_POST['arrows_per_end'] ?? 5)));
+$targetId = max(1, (int)($_POST['target_id'] ?? 4));
+$maxPossibleScore = $totalEnds * $arrowsPerEnd * 10;
+$isHtmlRedirect = !empty($_POST['redirect_html']);
 
 try {
     // 1. Ambil Data Atlet
@@ -26,6 +31,9 @@ try {
     $archer = $stmtArch->fetch();
 
     if (!$archer) {
+        if ($isHtmlRedirect) {
+            die("<div style='padding:40px;text-align:center;'>Data atlet tidak ditemukan. <a href='../app_dashboard.php'>Kembali</a></div>");
+        }
         http_response_code(404);
         echo json_encode(['status' => 'error', 'message' => 'Data atlet tidak ditemukan']);
         exit;
@@ -42,6 +50,9 @@ try {
 
         $isEligible = ($archer['total_sessions_count'] >= $minSessions) || !empty($archer['can_exam_promotion']);
         if (!$isEligible) {
+            if ($isHtmlRedirect) {
+                die("<div style='padding:40px;text-align:center;'>Belum memenuhi syarat ujian. <a href='../app_dashboard.php'>Kembali</a></div>");
+            }
             http_response_code(403);
             echo json_encode(['status' => 'error', 'message' => 'Atlet belum memenuhi syarat jam terbang atau izin rekomendasi coach untuk mengikuti ujian']);
             exit;
@@ -53,7 +64,7 @@ try {
     $stmtInsert = $pdo->prepare("
         INSERT INTO archery_sessions 
         (club_id, archer_id, coach_id, session_date, start_time, distance_meter, bow_category, target_id, session_type, exam_status, total_ends, arrows_per_end, max_possible_score, status)
-        VALUES (:cid, :aid, :coach, CURDATE(), CURTIME(), :dm, :bow, 4, :stype, :estatus, 6, 5, 300, 'in_progress')
+        VALUES (:cid, :aid, :coach, CURDATE(), CURTIME(), :dm, :bow, :target, :stype, :estatus, :ends, :arrows, :max_score, 'in_progress')
     ");
     $stmtInsert->execute([
         ':cid' => $archer['club_id'] ?? 1,
@@ -61,14 +72,23 @@ try {
         ':coach' => $coachId,
         ':dm' => $distanceMeter,
         ':bow' => $archer['bow_category'] ?? 'Standard Bow',
+        ':target' => $targetId,
         ':stype' => $sessionType,
-        ':estatus' => $examStatus
+        ':estatus' => $examStatus,
+        ':ends' => $totalEnds,
+        ':arrows' => $arrowsPerEnd,
+        ':max_score' => $maxPossibleScore
     ]);
     $newSessionId = (int)$pdo->lastInsertId();
 
     // 4. Update akumulasi sesi atlet
     $stmtInc = $pdo->prepare("UPDATE archery_archers SET total_sessions_count = total_sessions_count + 1 WHERE id = :id");
     $stmtInc->execute([':id' => $archerId]);
+
+    if ($isHtmlRedirect) {
+        header("Location: ../plotter.php?session_id={$newSessionId}");
+        exit;
+    }
 
     echo json_encode([
         'status' => 'success',
@@ -78,6 +98,9 @@ try {
 
 } catch (Exception $e) {
     error_log('Error create_session.php: ' . $e->getMessage());
+    if ($isHtmlRedirect) {
+        die("<div style='padding:40px;text-align:center;'>Gagal membuat sesi baru: " . htmlspecialchars($e->getMessage()) . " <a href='../app_dashboard.php'>Kembali</a></div>");
+    }
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Gagal membuat sesi baru']);
 }

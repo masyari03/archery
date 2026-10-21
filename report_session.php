@@ -3,9 +3,11 @@
 require_once __DIR__ . '/config/auth.php';
 Auth::requireAuth();
 
-$sessionId = (int)($_GET['session_id'] ?? 0);
+$sessionId = (int)($_GET['session_id'] ?? ($_GET['id'] ?? 0));
 if ($sessionId <= 0) {
-    die("Session ID tidak valid.");
+    $role = $_SESSION['role'] ?? 'parent';
+    $errBack = in_array($role, ['coach', 'super_admin']) ? 'coach_dashboard.php' : 'app_dashboard.php';
+    die("<div style='padding:40px;text-align:center;font-family:sans-serif;'><h3>Session ID tidak valid.</h3><p>Silakan pilih sesi latihan dari daftar riwayat latihan.</p><a href='{$errBack}'>Kembali ke Dashboard</a></div>");
 }
 
 // Ambil Detail Sesi Lengkap
@@ -51,21 +53,35 @@ $shotsByEnd = [];
 foreach ($allShots as $shot) {
     $shotsByEnd[$shot['end_id']][] = $shot;
 }
+
+$currentRole = $_SESSION['role'] ?? 'parent';
+$dashboardBackUrl = 'app_dashboard.php';
+if ($currentRole === 'coach' || $currentRole === 'super_admin') {
+    $dashboardBackUrl = 'coach_dashboard.php';
+} elseif ($currentRole === 'master_admin') {
+    $dashboardBackUrl = 'master_tenants.php';
+}
+
 $pageTitle = "Rapot Sesi Latihan - " . htmlspecialchars($session['archer_name']);
 require_once __DIR__ . '/views/header.php';
 ?>
 <link rel="stylesheet" href="assets/css/print_report.css">
 
 <!-- TOOLBAR ACTION (TIDAK TERCETAK SAAT PRINT) -->
-<div class="no-print" style="max-width: 820px; margin: 1.5rem auto 0; display: flex; justify-content: space-between; align-items: center; padding: 0 1rem;">
-    <a href="index.php" class="btn btn-secondary btn-sm">
+<div class="no-print" style="max-width: 820px; margin: 1.5rem auto 0; display: flex; justify-content: space-between; align-items: center; padding: 0 1rem; flex-wrap: wrap; gap: 0.5rem;">
+    <a href="<?= $dashboardBackUrl ?>" class="btn btn-secondary btn-sm fw-bold">
         ⬅ Kembali ke Dashboard
     </a>
-    <div style="display: flex; gap: 0.5rem;">
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <?php if (in_array($currentRole, ['coach', 'super_admin'])): ?>
+            <button type="button" class="btn btn-outline-warning btn-sm fw-bold" onclick="openEvalModal()">
+                ✍️ Catatan / Evaluasi Pelatih
+            </button>
+        <?php endif; ?>
         <a href="share_card.php?session_id=<?= $session['id'] ?>" class="btn btn-secondary btn-sm" style="color: #38bdf8;">
             📱 Buat Kartu Medsos
         </a>
-        <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">
+        <button type="button" class="btn btn-primary btn-sm fw-bold" onclick="window.print()">
             🖨️ Cetak Rapot Resmi (Print/PDF)
         </button>
     </div>
@@ -231,5 +247,81 @@ require_once __DIR__ . '/views/header.php';
         </div>
     </div>
 </div>
+
+<!-- MODAL EVALUASI PELATIH (KHUSUS COACH & SUPER ADMIN) -->
+<div id="evalModal" class="login-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1050; align-items: center; justify-content: center; backdrop-filter: blur(6px);">
+    <div class="card" style="max-width: 520px; width: 92%; background: #0f172a; border: 1px solid var(--border-color); border-radius: 14px; padding: 1.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0; color: #fff;">
+                ✍️ Catatan &amp; Evaluasi Pelatih Sesi #<?= $session['id'] ?>
+            </h3>
+            <button type="button" onclick="closeEvalModal()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer;">&times;</button>
+        </div>
+        <form id="evalForm" onsubmit="submitEvalForm(event)">
+            <input type="hidden" name="session_id" value="<?= $session['id'] ?>">
+            <div class="form-group mb-3">
+                <label class="form-label small fw-bold text-light mb-1">1. Form &amp; Eksekusi Teknik (Stance, Anchor, Release)</label>
+                <textarea class="form-control" name="coach_notes_technique" id="modalTechnique" rows="3" placeholder="Evaluasi posisi badan, tarikan, jangkar, dan pelepasan panah..." style="background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.15);"><?= htmlspecialchars($session['coach_notes_technique'] ?? '') ?></textarea>
+            </div>
+            <div class="form-group mb-3">
+                <label class="form-label small fw-bold text-light mb-1">2. Fokus &amp; Mental Atlet</label>
+                <input type="text" class="form-control" name="coach_notes_mental" id="modalMental" value="<?= htmlspecialchars($session['coach_notes_mental'] ?? '') ?>" placeholder="Tingkat ketenangan, ritme pernapasan, konsentrasi..." style="background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.15);">
+            </div>
+            <div class="form-group mb-3">
+                <label class="form-label small fw-bold text-light mb-1">3. Rekomendasi / PR Latihan Mandiri di Rumah</label>
+                <input type="text" class="form-control" name="coach_recommendation" id="modalRecom" value="<?= htmlspecialchars($session['coach_recommendation'] ?? '') ?>" placeholder="Tugas latihan SPT, karet resistensi, push up..." style="background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.15);">
+            </div>
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeEvalModal()">Batal</button>
+                <button type="submit" class="btn btn-primary btn-sm fw-bold px-3" id="saveEvalBtn">💾 Simpan Evaluasi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEvalModal() {
+    const m = document.getElementById('evalModal');
+    if (m) m.style.display = 'flex';
+}
+function closeEvalModal() {
+    const m = document.getElementById('evalModal');
+    if (m) m.style.display = 'none';
+}
+async function submitEvalForm(e) {
+    e.preventDefault();
+    const btn = document.getElementById('saveEvalBtn');
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+
+    const payload = {
+        session_id: <?= (int)$session['id'] ?>,
+        coach_notes_technique: document.getElementById('modalTechnique').value,
+        coach_notes_mental: document.getElementById('modalMental').value,
+        coach_recommendation: document.getElementById('modalRecom').value,
+        mark_completed: true
+    };
+
+    try {
+        const res = await fetch('api/save_session.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+            alert('✔ Catatan evaluasi pelatih berhasil disimpan!');
+            location.reload();
+        } else {
+            alert('Gagal: ' + (json.message || 'Terjadi kesalahan'));
+        }
+    } catch (err) {
+        alert('Terjadi kesalahan jaringan: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 Simpan Evaluasi';
+    }
+}
+</script>
 
 <?php include __DIR__ . '/views/footer.php'; ?>

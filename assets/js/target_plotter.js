@@ -19,6 +19,7 @@ class ArcheryPlotter {
         this.archerId = options.archerId || 0;
         this.totalEnds = options.totalEnds || 6;
         this.arrowsPerEnd = options.arrowsPerEnd || 5;
+        this.targetType = options.targetType || 'wa_10';
         this.currentEnd = 1;
 
         // Data tembakan per seri: { [endNum]: [ { x, y, radius, score, is_x, arrow_num } ] }
@@ -47,6 +48,12 @@ class ArcheryPlotter {
         };
 
         this.init();
+    }
+
+    setTargetType(type) {
+        this.targetType = type;
+        this.redraw();
+        this.updateScorecardUI();
     }
 
     init() {
@@ -133,7 +140,7 @@ class ArcheryPlotter {
         const normY = (pixelY - this.center) / this.radiusTarget;
         const r = Math.sqrt(normX * normX + normY * normY);
 
-        const scoreInfo = this.calculateScore(r);
+        const scoreInfo = this.calculateScore(r, normX, normY);
         this.currentDragPoint = {
             normX: parseFloat(normX.toFixed(4)),
             normY: parseFloat(normY.toFixed(4)),
@@ -145,11 +152,66 @@ class ArcheryPlotter {
         };
 
         if (this.loupeBadge) {
-            this.loupeBadge.textContent = scoreInfo.is_x ? 'X (10)' : (scoreInfo.score === 0 ? 'M' : scoreInfo.score);
+            let label = scoreInfo.score;
+            if (scoreInfo.is_x) label = 'X (' + scoreInfo.score + ')';
+            else if (scoreInfo.score === 0) label = 'M';
+            this.loupeBadge.textContent = label;
         }
     }
 
-    calculateScore(r) {
+    calculateScore(r, normX = 0, normY = 0) {
+        if (this.targetType === 'wa_6spot') {
+            if (r <= 0.05) return { score: 10, is_x: 1 };
+            if (r <= 0.10) return { score: 10, is_x: 0 };
+            if (r <= 0.20) return { score: 9, is_x: 0 };
+            if (r <= 0.30) return { score: 8, is_x: 0 };
+            if (r <= 0.40) return { score: 7, is_x: 0 };
+            if (r <= 0.50) return { score: 6, is_x: 0 };
+            if (r <= 0.60) return { score: 5, is_x: 0 };
+            return { score: 0, is_x: 0 }; // Outer 1-4 rings are Miss on 6-spot
+        }
+
+        if (this.targetType === 'wa_3spot') {
+            // 3 vertical spots: centers at y = -0.58, 0, +0.58; radius scale = 0.26
+            const spots = [-0.58, 0, 0.58];
+            let closestDist = 999;
+            spots.forEach(sy => {
+                const d = Math.sqrt(normX * normX + (normY - sy) * (normY - sy));
+                if (d < closestDist) closestDist = d;
+            });
+            const rRel = closestDist / 0.26;
+            if (rRel <= 0.10) return { score: 10, is_x: 1 };
+            if (rRel <= 0.20) return { score: 10, is_x: 0 };
+            if (rRel <= 0.40) return { score: 9, is_x: 0 };
+            if (rRel <= 0.60) return { score: 8, is_x: 0 };
+            if (rRel <= 0.80) return { score: 7, is_x: 0 };
+            if (rRel <= 1.00) return { score: 6, is_x: 0 };
+            return { score: 0, is_x: 0 };
+        }
+
+        if (this.targetType === 'nfaa_blue') {
+            // NFAA Indoor Blue Face: 5-ring face
+            if (r <= 0.10) return { score: 5, is_x: 1 };
+            if (r <= 0.20) return { score: 5, is_x: 0 };
+            if (r <= 0.40) return { score: 4, is_x: 0 };
+            if (r <= 0.60) return { score: 3, is_x: 0 };
+            if (r <= 0.80) return { score: 2, is_x: 0 };
+            if (r <= 1.00) return { score: 1, is_x: 0 };
+            return { score: 0, is_x: 0 };
+        }
+
+        if (this.targetType === 'wa_field') {
+            // WA Field Archery: Black rings 1-4, Gold center 5 and 6/X
+            if (r <= 0.10) return { score: 6, is_x: 1 };
+            if (r <= 0.20) return { score: 5, is_x: 0 };
+            if (r <= 0.40) return { score: 4, is_x: 0 };
+            if (r <= 0.60) return { score: 3, is_x: 0 };
+            if (r <= 0.80) return { score: 2, is_x: 0 };
+            if (r <= 1.00) return { score: 1, is_x: 0 };
+            return { score: 0, is_x: 0 };
+        }
+
+        // Default: WA 10-Ring Standard (Full Face)
         if (r <= 0.05) return { score: 10, is_x: 1 };
         if (r <= 0.10) return { score: 10, is_x: 0 };
         if (r <= 0.20) return { score: 9, is_x: 0 };
@@ -234,6 +296,179 @@ class ArcheryPlotter {
         const c = this.center;
         const R = this.radiusTarget;
 
+        if (this.targetType === 'wa_6spot') {
+            // Base background
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(c, c, R * 1.06, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Paper circle
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.arc(c, c, R * 0.64, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            const rings = [
+                { r: 0.60, color: this.colors.blue },
+                { r: 0.50, color: this.colors.blue },
+                { r: 0.40, color: this.colors.red },
+                { r: 0.30, color: this.colors.red },
+                { r: 0.20, color: this.colors.gold },
+                { r: 0.10, color: this.colors.gold },
+                { r: 0.05, color: this.colors.gold }
+            ];
+            rings.forEach(ring => {
+                ctx.fillStyle = ring.color;
+                ctx.beginPath();
+                ctx.arc(c, c, R * ring.r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+            });
+
+            // Center cross
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(c - 6, c); ctx.lineTo(c + 6, c);
+            ctx.moveTo(c, c - 6); ctx.lineTo(c, c + 6);
+            ctx.stroke();
+            return;
+        }
+
+        if (this.targetType === 'wa_3spot') {
+            // Canvas background
+            ctx.fillStyle = '#0b1329';
+            ctx.beginPath();
+            ctx.arc(c, c, R * 1.06, 0, Math.PI * 2);
+            ctx.fill();
+
+            const spots = [-0.58, 0, 0.58];
+            const sR = R * 0.26;
+
+            spots.forEach((syOffset, idx) => {
+                const sCenterY = c + syOffset * R;
+
+                // Spot outer shadow & frame
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.arc(c, sCenterY, sR * 1.08, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#475569';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                const rings = [
+                    { r: 1.00, color: this.colors.blue },  // 6
+                    { r: 0.80, color: this.colors.blue },  // 7
+                    { r: 0.60, color: this.colors.red },   // 8
+                    { r: 0.40, color: this.colors.red },   // 8/9
+                    { r: 0.20, color: this.colors.gold },  // 10
+                    { r: 0.10, color: this.colors.gold }   // Inner X
+                ];
+                rings.forEach(ring => {
+                    ctx.fillStyle = ring.color;
+                    ctx.beginPath();
+                    ctx.arc(c, sCenterY, sR * ring.r, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 0.7;
+                    ctx.stroke();
+                });
+
+                // Spot label (1, 2, 3)
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.font = 'bold 10px Outfit, sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(`Spot ${idx + 1}`, c - sR * 1.15, sCenterY + 3);
+
+                // Center cross
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.moveTo(c - 4, sCenterY); ctx.lineTo(c + 4, sCenterY);
+                ctx.moveTo(c, sCenterY - 4); ctx.lineTo(c, sCenterY + 4);
+                ctx.stroke();
+            });
+            return;
+        }
+
+        if (this.targetType === 'nfaa_blue') {
+            // NFAA Indoor Blue Face
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(c, c, R * 1.06, 0, Math.PI * 2);
+            ctx.fill();
+
+            const rings = [
+                { r: 1.00, color: '#1e3a8a', stroke: '#ffffff' }, // 1
+                { r: 0.80, color: '#1e3a8a', stroke: '#ffffff' }, // 2
+                { r: 0.60, color: '#1d4ed8', stroke: '#ffffff' }, // 3
+                { r: 0.40, color: '#1d4ed8', stroke: '#ffffff' }, // 4
+                { r: 0.20, color: '#ffffff', stroke: '#1e3a8a' }, // 5
+                { r: 0.10, color: '#ffffff', stroke: '#1e3a8a' }  // X
+            ];
+            rings.forEach(ring => {
+                ctx.fillStyle = ring.color;
+                ctx.beginPath();
+                ctx.arc(c, c, R * ring.r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = ring.stroke;
+                ctx.lineWidth = 0.9;
+                ctx.stroke();
+            });
+
+            // Center X
+            ctx.strokeStyle = '#1e3a8a';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(c - 5, c); ctx.lineTo(c + 5, c);
+            ctx.moveTo(c, c - 5); ctx.lineTo(c, c + 5);
+            ctx.stroke();
+            return;
+        }
+
+        if (this.targetType === 'wa_field') {
+            // WA Field Archery Face (Black 1-4, Gold 5-6)
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(c, c, R * 1.06, 0, Math.PI * 2);
+            ctx.fill();
+
+            const rings = [
+                { r: 1.00, color: '#18181b', stroke: '#ffffff' }, // 1
+                { r: 0.80, color: '#18181b', stroke: '#ffffff' }, // 2
+                { r: 0.60, color: '#27272a', stroke: '#ffffff' }, // 3
+                { r: 0.40, color: '#27272a', stroke: '#ffffff' }, // 4
+                { r: 0.20, color: '#eab308', stroke: '#000000' }, // 5
+                { r: 0.10, color: '#ca8a04', stroke: '#000000' }  // 6 / X
+            ];
+            rings.forEach(ring => {
+                ctx.fillStyle = ring.color;
+                ctx.beginPath();
+                ctx.arc(c, c, R * ring.r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = ring.stroke;
+                ctx.lineWidth = 0.9;
+                ctx.stroke();
+            });
+
+            // Center cross
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(c - 6, c); ctx.lineTo(c + 6, c);
+            ctx.moveTo(c, c - 6); ctx.lineTo(c, c + 6);
+            ctx.stroke();
+            return;
+        }
+
+        // Default: WA 10-Ring Standard (Full Face)
         const rings = [
             { r: 1.00, color: this.colors.white },
             { r: 0.90, color: this.colors.white },
@@ -400,7 +635,8 @@ class ArcheryPlotter {
         const totalScoreEl = document.getElementById('totalScoreDisplay');
         if (totalScoreEl) totalScoreEl.textContent = grandTotal;
 
-        const maxPossible = this.totalEnds * this.arrowsPerEnd * 10;
+        const maxPerArrow = this.targetType === 'nfaa_blue' ? 5 : (this.targetType === 'wa_field' ? 6 : 10);
+        const maxPossible = this.totalEnds * this.arrowsPerEnd * maxPerArrow;
         const accuracyPct = maxPossible > 0 ? ((grandTotal / maxPossible) * 100).toFixed(1) : '0.0';
         const accEl = document.getElementById('accuracyDisplay');
         if (accEl) accEl.textContent = `${accuracyPct}%`;

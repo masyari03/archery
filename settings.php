@@ -172,6 +172,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $alertMsg = "Nomor tujuan tes tidak boleh kosong.";
             $alertType = 'danger';
         }
+    } elseif ($action === 'save_session_format') {
+        $defEnds = max(1, min(24, (int)($_POST['default_total_ends'] ?? 6)));
+        $defArrows = max(1, min(12, (int)($_POST['default_arrows_per_end'] ?? 5)));
+        $defTarget = max(1, (int)($_POST['default_target_id'] ?? 4));
+
+        try {
+            $stmtS = $pdo->prepare("
+                UPDATE archery_clubs 
+                SET default_total_ends = :ends,
+                    default_arrows_per_end = :arrows,
+                    default_target_id = :target
+                WHERE id = :cid
+            ");
+            $stmtS->execute([
+                ':ends' => $defEnds,
+                ':arrows' => $defArrows,
+                ':target' => $defTarget,
+                ':cid' => $clubId
+            ]);
+            $alertMsg = "✔ Konfigurasi Standar Format Sesi Panahan Klub berhasil disimpan!";
+        } catch (PDOException $e) {
+            $alertMsg = "Gagal menyimpan format sesi: " . $e->getMessage();
+            $alertType = 'danger';
+        }
     }
 }
 
@@ -264,13 +288,16 @@ require_once __DIR__ . '/views/header.php';
     <!-- TABS NAVIGATION -->
     <div class="settings-tab-nav">
         <button type="button" class="tab-btn active" onclick="switchSettingsTab('brandingTab', this)">
-            🎨 Profil & Branding Klub
+            🎨 Profil &amp; Branding Klub
+        </button>
+        <button type="button" class="tab-btn" onclick="switchSettingsTab('sessionFormatTab', this)">
+            🏹 Format Sesi &amp; Seri Panahan
         </button>
         <button type="button" class="tab-btn" onclick="switchSettingsTab('fonnteTab', this)">
             🤖 WhatsApp Bot (Fonnte)
         </button>
         <button type="button" class="tab-btn" onclick="switchSettingsTab('securityTab', this)">
-            🛡️ Bantuan Login & Error Hubungi Admin
+            🛡️ Bantuan Login &amp; Error Hubungi Admin
         </button>
     </div>
 
@@ -498,7 +525,61 @@ require_once __DIR__ . '/views/header.php';
         </div>
     </div>
 
-    <!-- TAB 3: BANTUAN LOGIN & HUBUNGI ADMIN -->
+    <!-- TAB 3: FORMAT SESI & SERI PANAHAN -->
+    <div id="sessionFormatTab" class="settings-tab-content" style="display: none;">
+        <form method="POST">
+            <input type="hidden" name="action" value="save_session_format">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🏹 Pengaturan Format Sesi Latihan &amp; Jumlah Seri / Anak Panah</h2>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+                    Atur format baku sesi latihan default untuk seluruh pelatih dan atlet di klub ini. Format ini akan otomatis dimuat setiap kali atlet atau pelatih memulai sesi baru. Pelatih tetap dapat memilih opsi sesi percobaan (misal 2 seri) atau ujian kenaikan jarak sewaktu-waktu.
+                </p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Jumlah Seri Default (Total Ends)</label>
+                        <input type="number" class="form-control" name="default_total_ends" id="cfgTotalEnds" value="<?= (int)($club['default_total_ends'] ?? 6) ?>" min="1" max="24" required oninput="calcSettingsMaxScore()">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Standar World Archery / Klub umumnya 6 seri (atau 10 seri untuk indoor 300 round).</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Jumlah Anak Panah per Seri (Arrows per End)</label>
+                        <input type="number" class="form-control" name="default_arrows_per_end" id="cfgArrowsPerEnd" value="<?= (int)($club['default_arrows_per_end'] ?? 5) ?>" min="1" max="12" required oninput="calcSettingsMaxScore()">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Umumnya 5 panah (skor max 300) atau 6 panah (skor max 360). Sesi indoor Vegas 3 panah.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Papan Target Utama Default</label>
+                        <select class="form-control" name="default_target_id">
+                            <option value="4" <?= (($club['default_target_id'] ?? 4) == 4) ? 'selected' : '' ?>>WA 10-Ring Standard (80/122/40cm Full Face 1-10 + X)</option>
+                            <option value="5" <?= (($club['default_target_id'] ?? 4) == 5) ? 'selected' : '' ?>>WA 6-Ring Center Spot (Compound/Spot 5-10 + X)</option>
+                            <option value="1" <?= (($club['default_target_id'] ?? 4) == 1) ? 'selected' : '' ?>>WA Indoor 3-Spot Vertical (Triple Spot 6-10 + X)</option>
+                            <option value="2" <?= (($club['default_target_id'] ?? 4) == 2) ? 'selected' : '' ?>>NFAA Indoor Blue Face (Blue 1-4, White 5 + X)</option>
+                            <option value="3" <?= (($club['default_target_id'] ?? 4) == 3) ? 'selected' : '' ?>>WA Field Archery Face (Black 1-4, Gold 5 + X)</option>
+                        </select>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Papan target default saat membuka target plotter scoring.</div>
+                    </div>
+                </div>
+
+                <div class="alert alert-dark" style="margin-top: 1rem; border: 1px solid var(--border-color); background: rgba(0,0,0,0.3); padding: 1rem; border-radius: var(--radius-sm);">
+                    <div style="font-size: 0.85rem; color: var(--text-dim);">📊 Kalkulasi Kapasitas Sesi:</div>
+                    <div style="font-size: 1.15rem; font-weight: 700; color: var(--primary); margin-top: 4px;" id="cfgCalcDisplay">
+                        <?= (int)($club['default_total_ends'] ?? 6) ?> Seri × <?= (int)($club['default_arrows_per_end'] ?? 5) ?> Panah = <?= ((int)($club['default_total_ends'] ?? 6)) * ((int)($club['default_arrows_per_end'] ?? 5)) ?> Tembakan (Maksimal <?= ((int)($club['default_total_ends'] ?? 6)) * ((int)($club['default_arrows_per_end'] ?? 5)) * 10 ?> Poin)
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary">
+                        💾 Simpan Format Sesi Latihan Klub
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- TAB 4: BANTUAN LOGIN & HUBUNGI ADMIN -->
     <div id="securityTab" class="settings-tab-content" style="display: none;">
         <div class="card">
             <div class="card-header">
@@ -548,6 +629,17 @@ function insertTag(textareaId, tag) {
     el.value = text.substring(0, start) + tag + text.substring(end);
     el.focus();
     el.selectionStart = el.selectionEnd = start + tag.length;
+}
+
+function calcSettingsMaxScore() {
+    const ends = parseInt(document.getElementById('cfgTotalEnds').value) || 6;
+    const arrows = parseInt(document.getElementById('cfgArrowsPerEnd').value) || 5;
+    const totalShots = ends * arrows;
+    const maxScore = totalShots * 10;
+    const disp = document.getElementById('cfgCalcDisplay');
+    if (disp) {
+        disp.innerText = `${ends} Seri × ${arrows} Panah = ${totalShots} Tembakan (Maksimal ${maxScore} Poin)`;
+    }
 }
 </script>
 

@@ -96,6 +96,21 @@ foreach ($allShots as $shot) {
         'is_x' => (int)$shot['is_x']
     ];
 }
+
+$targetCode = $session['target_code'] ?? '';
+$targetId = (int)($session['target_id'] ?? 4);
+if ($targetCode === 'VEGAS_3SPOT' || $targetId === 1) {
+    $initialTargetType = 'wa_3spot';
+} elseif ($targetId === 2) {
+    $initialTargetType = 'nfaa_blue';
+} elseif ($targetId === 3) {
+    $initialTargetType = 'wa_field';
+} elseif ($targetId === 5) {
+    $initialTargetType = 'wa_6spot';
+} else {
+    $initialTargetType = 'wa_10';
+}
+
 $pageTitle = "Papan Bidik Target - TARGET ARCHERY";
 require_once __DIR__ . '/views/header.php';
 ?>
@@ -182,9 +197,23 @@ require_once __DIR__ . '/views/header.php';
     <div class="plotter-grid">
         <!-- KOLOM KIRI: TARGET FACE CANVAS + KACA PEMBESAR (LOUPE) -->
         <div class="card target-plotter-container">
-            <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
                 <span id="activeEndBadge" class="badge badge-gold" style="font-size: 0.9rem;">Seri 1 / <?= $session['total_ends'] ?></span>
-                <span style="font-size: 0.8rem; color: var(--text-dim);">💡 Sentuh & geser jari untuk membidik presisi</span>
+                <span style="font-size: 0.8rem; color: var(--text-dim);">💡 Sentuh &amp; geser jari untuk membidik presisi</span>
+            </div>
+
+            <!-- SELECTOR MODEL TARGET INTERNASIONAL -->
+            <div style="width: 100%; margin-bottom: 0.85rem; padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 4px;">
+                    <i class="bi bi-bullseye"></i> Model Target Face:
+                </div>
+                <div class="btn-group btn-group-sm" role="group" id="targetTypeBtnGroup">
+                    <button type="button" class="btn btn-outline-warning <?= ($initialTargetType === 'wa_10') ? 'active' : '' ?>" onclick="switchTargetModel('wa_10', this)" title="WA 10-Ring Standard (80/122/40cm Full Face 1-10 + X)">WA 10-Ring</button>
+                    <button type="button" class="btn btn-outline-warning <?= ($initialTargetType === 'wa_6spot') ? 'active' : '' ?>" onclick="switchTargetModel('wa_6spot', this)" title="WA 6-Ring Center Spot (Compound/Spot 5-10 + X)">WA 6-Spot</button>
+                    <button type="button" class="btn btn-outline-warning <?= ($initialTargetType === 'wa_3spot') ? 'active' : '' ?>" onclick="switchTargetModel('wa_3spot', this)" title="WA Indoor 3-Spot Vertical (Triple Spot 6-10 + X)">3-Spot Vertikal</button>
+                    <button type="button" class="btn btn-outline-warning <?= ($initialTargetType === 'nfaa_blue') ? 'active' : '' ?>" onclick="switchTargetModel('nfaa_blue', this)" title="NFAA Indoor Blue Face (Blue 1-4, White 5 + X)">NFAA Blue</button>
+                    <button type="button" class="btn btn-outline-warning <?= ($initialTargetType === 'wa_field') ? 'active' : '' ?>" onclick="switchTargetModel('wa_field', this)" title="WA Field Archery Face (Black 1-4, Gold 5 + X)">WA Field</button>
+                </div>
             </div>
 
             <!-- CANVAS TARGET WRAP DENGAN FLOATING MAGNIFIER LOUPE -->
@@ -330,8 +359,15 @@ const plotter = new ArcheryPlotter('targetCanvas', 'magnifierLoupe', {
     archerId: <?= (int)$session['archer_id'] ?>,
     totalEnds: <?= (int)$session['total_ends'] ?>,
     arrowsPerEnd: <?= (int)$session['arrows_per_end'] ?>,
+    targetType: '<?= $initialTargetType ?>',
     existingEnds: <?= json_encode($existingEnds) ?>
 });
+
+function switchTargetModel(type, btn) {
+    plotter.setTargetType(type);
+    document.querySelectorAll('#targetTypeBtnGroup button').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+}
 
 // Jalankan pengecekan inisial untuk status kelengkapan 6 seri
 plotter.updateScorecardUI();

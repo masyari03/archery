@@ -311,7 +311,17 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
         
         <!-- SISI KIRI: BRAND & CHILD SWITCHER -->
         <div class="d-flex align-items-center gap-2 gap-md-3 min-w-0">
-            <a href="<?= Auth::check() ? 'app_dashboard.php' : 'index.php' ?>" class="nav-brand-wrap">
+<?php
+$brandHomeUrl = 'app_dashboard.php';
+if ($currentRole === 'coach') {
+    $brandHomeUrl = 'coach_dashboard.php';
+} elseif ($currentRole === 'super_admin') {
+    $brandHomeUrl = 'coach_dashboard.php';
+} elseif ($currentRole === 'master_admin') {
+    $brandHomeUrl = 'master_tenants.php';
+}
+?>
+            <a href="<?= Auth::check() ? $brandHomeUrl : 'index.php' ?>" class="nav-brand-wrap" title="Beranda Dashboard">
                 <?php if (!empty($clubMeta['logo_url']) && $clubMeta['logo_url'] !== 'assets/img/default_logo.png' && file_exists(__DIR__ . '/../' . $clubMeta['logo_url'])): ?>
                     <img src="<?= htmlspecialchars($clubMeta['logo_url']) ?>" alt="Logo" class="nav-brand-logo-img" loading="lazy" decoding="async">
                 <?php else: ?>
@@ -351,21 +361,7 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
         <!-- SISI TENGAH: NAVIGATION LINKS (TERKELOMPOK RAMPING DENGAN STRICT RBAC) -->
         <nav class="desktop-nav-links d-flex align-items-center gap-1">
 
-            <!-- 1. Menu Portal Scoring (Cepat) -->
-            <?php if ($canScoring): ?>
-                <a href="app_dashboard.php" class="nav-pill-link <?= $currentPage === 'app_dashboard.php' ? 'active' : '' ?>">
-                    <span>📊</span> <span>Portal Scoring</span>
-                </a>
-            <?php endif; ?>
-
-            <!-- 2. Menu Web Publik (Cepat) -->
-            <?php if ($canWebProfil): ?>
-                <a href="index.php" target="_blank" class="nav-pill-link" title="Lihat Web Publik Klub">
-                    <span>🌐</span> <span>Web Publik</span>
-                </a>
-            <?php endif; ?>
-
-            <!-- 3. Dropdown Laporan & Prestasi (HILANG TOTAL jika seluruh sub-item nonaktif di RBAC) -->
+            <!-- Dropdown Laporan & Prestasi (HILANG TOTAL jika seluruh sub-item nonaktif di RBAC) -->
             <?php if ($hasLaporanMenu): ?>
                 <div class="dropdown">
                     <button class="nav-pill-link nav-pill-dropdown dropdown-toggle <?= in_array($currentPage, ['report_session.php', 'report_monthly.php', 'share_card.php']) ? 'active' : '' ?>" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -545,6 +541,13 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
                                 </a>
                             </li>
                         <?php endif; ?>
+                        <?php if ($canWebProfil): ?>
+                            <li>
+                                <a class="dropdown-item dropdown-item-modern" href="index.php" target="_blank">
+                                    <i class="bi bi-box-arrow-up-right text-info"></i> Lihat Web Publik Klub
+                                </a>
+                            </li>
+                        <?php endif; ?>
                         <li><hr class="dropdown-divider my-1 border-secondary border-opacity-25"></li>
                         <li>
                             <a class="dropdown-item dropdown-item-modern text-danger" href="logout.php">
@@ -569,13 +572,6 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
         <a href="app_dashboard.php" class="bottom-nav-item <?= $currentPage === 'app_dashboard.php' ? 'active' : '' ?>">
             <span class="bottom-nav-icon">📊</span>
             <span>Scoring</span>
-        </a>
-    <?php endif; ?>
-
-    <?php if ($canWebProfil): ?>
-        <a href="index.php" class="bottom-nav-item <?= $currentPage === 'index.php' ? 'active' : '' ?>">
-            <span class="bottom-nav-icon">🌐</span>
-            <span>Web</span>
         </a>
     <?php endif; ?>
 

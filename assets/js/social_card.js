@@ -99,11 +99,11 @@ class SocialCardGenerator {
         ctx.fillText(bowInfo, 70, 395);
 
         // 4. Panel Skor Utama (Vibrant Gold Card)
-        const scoreBoxY = 460;
+        const scoreBoxY = (this.format === 'story') ? 460 : 440;
         const scoreBoxH = (this.format === 'story') ? 340 : 260;
 
         ctx.fillStyle = 'rgba(245, 158, 11, 0.08)';
-        ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
         ctx.lineWidth = 3;
         this.roundRect(ctx, 70, scoreBoxY, w - 140, scoreBoxH, 28);
         ctx.fill();
@@ -116,24 +116,30 @@ class SocialCardGenerator {
         // Angka Skor Besar
         ctx.fillStyle = '#ffffff';
         ctx.font = '800 110px Outfit, sans-serif';
-        const scoreText = `${this.data.totalScore || 282}`;
+        const rawScore = (this.data.totalScore !== undefined && this.data.totalScore !== null) ? this.data.totalScore : 0;
+        const scoreText = `${rawScore}`;
+        const scoreWidth = ctx.measureText(scoreText).width;
         ctx.fillText(scoreText, 110, scoreBoxY + 175);
 
         ctx.fillStyle = '#94a3b8';
         ctx.font = '600 42px Outfit, sans-serif';
-        ctx.fillText(`/ ${this.data.maxPossible || 300}`, 110 + ctx.measureText(scoreText).width + 20, scoreBoxY + 175);
+        const maxScoreVal = this.data.maxPossible || 300;
+        ctx.fillText(`/ ${maxScoreVal}`, 110 + scoreWidth + 18, scoreBoxY + 175);
 
         // Sub-stat: Akurasi & Total 10/X
-        const subStatY = scoreBoxY + ((this.format === 'story') ? 270 : 210);
+        const subStatY = scoreBoxY + ((this.format === 'story') ? 275 : 210);
         ctx.fillStyle = '#10b981';
-        ctx.font = 'bold 32px Outfit, sans-serif';
-        ctx.fillText(`⚡ Akurasi: ${this.data.accuracyPct || '94.0'}%`, 110, subStatY);
+        ctx.font = 'bold 30px Outfit, sans-serif';
+        ctx.fillText(`⚡ Akurasi: ${this.data.accuracyPct ?? '0.0'}%`, 110, subStatY);
 
         ctx.fillStyle = '#fbbf24';
-        ctx.fillText(`🎯 10s: ${this.data.tenCount || 14} | Xs: ${this.data.xCount || 6}`, w - 420, subStatY);
+        ctx.font = 'bold 30px Outfit, sans-serif';
+        const rightStat = `🎯 10s: ${this.data.tenCount ?? 0} | Xs: ${this.data.xCount ?? 0}`;
+        const rightStatWidth = ctx.measureText(rightStat).width;
+        ctx.fillText(rightStat, w - 110 - rightStatWidth, subStatY);
 
         // 5. Visualisasi Target Face di Tengah (dengan Sebaran Panah Asli)
-        const targetCenterY = (this.format === 'story') ? 1160 : 860;
+        const targetCenterY = (this.format === 'story') ? 1160 : 850;
         const targetRadius = (this.format === 'story') ? 260 : 160;
         this.drawTargetWithShots(ctx, w / 2, targetCenterY, targetRadius, this.data.shots || []);
 

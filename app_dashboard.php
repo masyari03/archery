@@ -244,8 +244,9 @@ require_once __DIR__ . '/views/header.php';
                         </thead>
                         <tbody>
                             <?php foreach ($sessions as $idx => $s): 
-                                $isExam = ($s['session_type'] === 'exam_promotion');
-                                $evalStatus = $s['coach_evaluation_status'] ?? 'pending';
+                                $isExam = ($s['session_type'] === 'exam_promotion' || $s['session_type'] === 'exam');
+                                $hasNotes = !empty($s['coach_notes_technique']) || !empty($s['coach_recommendation']) || ($s['status'] === 'completed');
+                                $evalStatus = $s['exam_status'] ?? 'pending';
                                 $accuracy = $s['max_possible_score'] > 0 ? round(($s['total_score'] / $s['max_possible_score']) * 100, 1) : 0;
                             ?>
                                 <tr>
@@ -276,14 +277,19 @@ require_once __DIR__ . '/views/header.php';
                                         <span class="badge bg-dark border border-secondary"><?= $accuracy ?>%</span>
                                     </td>
                                     <td>
-                                        <?php if ($evalStatus === 'approved'): ?>
-                                            <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Lulus Kenaikan Jarak</span>
-                                        <?php elseif ($evalStatus === 'rejected'): ?>
+                                        <?php if ($isExam && $evalStatus === 'approved'): ?>
+                                            <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Lulus Ujian Jarak</span>
+                                        <?php elseif ($isExam && $evalStatus === 'rejected'): ?>
                                             <span class="badge bg-danger"><i class="bi bi-x-circle-fill"></i> Ditunda / Perlu Latihan</span>
-                                        <?php elseif ($evalStatus === 'evaluated'): ?>
-                                            <span class="badge bg-info text-dark"><i class="bi bi-chat-left-text-fill"></i> Terevaluasi</span>
+                                        <?php elseif ($hasNotes): ?>
+                                            <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Sudah Dievaluasi Coach</span>
+                                            <?php if (!empty($s['coach_notes_technique'])): ?>
+                                                <div class="small text-muted mt-1 text-truncate" style="max-width: 220px;" title="<?= htmlspecialchars($s['coach_notes_technique']) ?>">
+                                                    <i class="bi bi-chat-quote"></i> "<?= htmlspecialchars(mb_strimwidth($s['coach_notes_technique'], 0, 38, '...')) ?>"
+                                                </div>
+                                            <?php endif; ?>
                                         <?php else: ?>
-                                            <span class="badge bg-secondary text-muted"><i class="bi bi-hourglass-split"></i> Menunggu Evaluasi (6 Seri)</span>
+                                            <span class="badge bg-secondary text-muted"><i class="bi bi-hourglass-split"></i> Menunggu Evaluasi (<?= (int)$s['total_ends'] ?> Seri)</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-end">
@@ -291,12 +297,17 @@ require_once __DIR__ . '/views/header.php';
                                             <a href="plotter.php?session_id=<?= $s['id'] ?>" class="btn btn-outline-warning" title="Buka Target Plotter">
                                                 <i class="bi bi-bullseye"></i>
                                             </a>
-                                            <a href="report_session.php?id=<?= $s['id'] ?>" class="btn btn-outline-info" title="Rapor Sesi A4">
+                                            <a href="report_session.php?session_id=<?= $s['id'] ?>" class="btn btn-outline-info" title="Rapor Sesi A4">
                                                 <i class="bi bi-file-earmark-text"></i>
                                             </a>
                                             <a href="share_card.php?session_id=<?= $s['id'] ?>" class="btn btn-outline-light" title="Share Card Sosial">
                                                 <i class="bi bi-share"></i>
                                             </a>
+                                            <?php if (in_array($currentRole, ['coach', 'super_admin', 'master_admin'])): ?>
+                                                <button type="button" class="btn btn-outline-success" onclick="openDirectEval(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['coach_notes_technique'] ?? '')) ?>', '<?= htmlspecialchars(addslashes($s['coach_notes_mental'] ?? '')) ?>', '<?= htmlspecialchars(addslashes($s['coach_recommendation'] ?? '')) ?>')" title="Catatan &amp; Evaluasi Pelatih">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>
@@ -309,12 +320,12 @@ require_once __DIR__ . '/views/header.php';
     </div>
 </div>
 
-<!-- Modal Input Tembakan Baru (Auto Jarak & Jam Kalibrasi) -->
+<!-- Modal Input Tembakan Baru (Auto Jarak & Preset Format) -->
 <div class="modal fade" id="newSessionModal" tabindex="-1" aria-labelledby="newSessionModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-secondary shadow">
-            <form action="api/session_save.php" method="POST" id="newSessionForm">
-                <input type="hidden" name="action" value="create_session">
+        <div class="modal-content border-secondary shadow" style="background: #111827; color: #f8fafc;">
+            <form action="api/create_session.php" method="POST" id="newSessionForm">
+                <input type="hidden" name="redirect_html" value="1">
                 <input type="hidden" name="archer_id" value="<?= $archerId ?>">
                 <input type="hidden" name="distance_meter" value="<?= $currentDist ?>">
 
@@ -359,13 +370,13 @@ require_once __DIR__ . '/views/header.php';
                         <label class="form-label fw-bold">Tipe Sesi Latihan <span class="text-danger">*</span></label>
                         <div class="d-flex gap-3">
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="session_type" id="typeRegular" value="regular" checked>
+                                <input class="form-check-input" type="radio" name="session_type" id="typeRegular" value="practice" checked>
                                 <label class="form-check-label" for="typeRegular">
                                     Latihan Rutin
                                 </label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="session_type" id="typeExam" value="exam_promotion" <?= $canTakeExam ? '' : 'disabled' ?>>
+                                <input class="form-check-input" type="radio" name="session_type" id="typeExam" value="exam" <?= $canTakeExam ? '' : 'disabled' ?>>
                                 <label class="form-check-label <?= $canTakeExam ? 'text-warning fw-bold' : 'text-muted' ?>" for="typeExam">
                                     Ujian Kenaikan Jarak (<?= $canTakeExam ? 'Tersedia' : 'Terkunci' ?>)
                                 </label>
@@ -382,20 +393,45 @@ require_once __DIR__ . '/views/header.php';
                         <?php endif; ?>
                     </div>
 
-                    <!-- Pilihan Target Face & Format Seri -->
+                    <!-- Preset Format Sesi (Pilihan Seri & Anak Panah) -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Pilihan Format Sesi <span class="text-warning">*</span></label>
+                        <select class="form-select bg-dark text-white border-secondary" id="sessionPresetSelect" onchange="applySessionPreset(this.value)">
+                            <option value="6x5" selected>🏹 Latihan Rutin: 6 Seri × 5 Panah (30 Panah / Max 300)</option>
+                            <option value="6x6">🏆 Standar World Archery: 6 Seri × 6 Panah (36 Panah / Max 360)</option>
+                            <option value="10x3">🎯 Indoor Round: 10 Seri × 3 Panah (30 Panah / Max 300)</option>
+                            <option value="2x3">⚡ Sesi Percobaan Singkat: 2 Seri × 3 Panah (6 Panah / Max 60)</option>
+                            <option value="2x6">🔍 Sesi Percobaan Standar: 2 Seri × 6 Panah (12 Panah / Max 120)</option>
+                            <option value="custom">⚙️ Kustom (Atur Seri &amp; Panah Sendiri)</option>
+                        </select>
+                    </div>
+
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label small text-muted">Format Sesi</label>
-                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" value="6 Seri &bull; 5 Anak Panah (30 Arrows)" readonly>
+                            <label class="form-label small text-muted">Jumlah Seri (Ends)</label>
+                            <input type="number" name="total_ends" id="inputTotalEnds" class="form-control bg-dark text-white border-secondary" value="6" min="1" max="24" required oninput="calcMaxScore()">
                         </div>
                         <div class="col-6">
-                            <label class="form-label small text-muted">Maksimal Skor</label>
-                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" value="300 Poin (WA Standar)" readonly>
+                            <label class="form-label small text-muted">Panah per Seri (Arrows)</label>
+                            <input type="number" name="arrows_per_end" id="inputArrowsPerEnd" class="form-control bg-dark text-white border-secondary" value="5" min="1" max="12" required oninput="calcMaxScore()">
                         </div>
                     </div>
 
-                    <div class="form-text text-muted small">
-                        <i class="bi bi-info-circle"></i> Sesi tembakan dilengkapi <strong>Triple-Shield Auto-Save</strong> via AJAX per seri tembakan. Data tidak akan hilang saat reload.
+                    <!-- Pilihan Target Face Standar Internasional -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Papan Target (International Target Face)</label>
+                        <select class="form-select bg-dark text-white border-secondary" name="target_id" id="targetFaceSelect">
+                            <option value="4" selected>🎯 WA 10-Ring Standard (80/122/40cm Full Face 1-10 + X)</option>
+                            <option value="5">🎯 WA 6-Ring Center Spot (Compound/Spot 5-10 + X)</option>
+                            <option value="1">🎯 WA Indoor 3-Spot Vertical (Triple Spot 6-10 + X)</option>
+                            <option value="2">🎯 NFAA Indoor Blue Face (Blue 1-4, White 5 + X)</option>
+                            <option value="3">🎯 WA Field Archery Face (Black 1-4, Gold 5 + X)</option>
+                        </select>
+                    </div>
+
+                    <div class="alert alert-dark border-secondary py-2 px-3 d-flex justify-content-between align-items-center mb-0">
+                        <span class="small text-muted">Kapasitas Maksimal Skor:</span>
+                        <strong class="text-warning fs-6" id="maxScoreDisplay">300 Poin (6 Seri × 5 Panah)</strong>
                     </div>
                 </div>
                 <div class="modal-footer bg-dark border-top border-secondary">
@@ -405,6 +441,39 @@ require_once __DIR__ . '/views/header.php';
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Evaluasi Langsung Coach -->
+<div class="modal fade" id="coachEvalModalDirect" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-secondary" style="background: #111827; color: #f8fafc;">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-warning fw-bold"><i class="bi bi-pencil-square"></i> Evaluasi Pelatih Sesi #<span id="evalSessionIdSpan"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="evalDirectSessionId">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">1. Catatan Form &amp; Teknik (Stance, Anchor, Release)</label>
+                    <textarea class="form-control bg-dark text-white border-secondary" id="evalDirectTechnique" rows="3" placeholder="Contoh: Tarikan siku konsisten, perbaiki rilis agar tidak menyentak..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">2. Evaluasi Mental &amp; Fokus</label>
+                    <input type="text" class="form-control bg-dark text-white border-secondary" id="evalDirectMental" placeholder="Contoh: Sangat tenang saat tembakan terakhir">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">3. Rekomendasi / PR Latihan di Rumah</label>
+                    <input type="text" class="form-control bg-dark text-white border-secondary" id="evalDirectRecom" placeholder="Contoh: Latihan SPT 15 menit setiap hari">
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-success fw-bold px-4" onclick="submitDirectEval()">
+                    <i class="bi bi-check-circle-fill"></i> Simpan Catatan Evaluasi
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -421,6 +490,77 @@ setInterval(function() {
         badge.innerText = `${hours}:${minutes}:${seconds} WIB`;
     }
 }, 1000);
+
+function applySessionPreset(preset) {
+    const endsInput = document.getElementById('inputTotalEnds');
+    const arrowsInput = document.getElementById('inputArrowsPerEnd');
+    if (preset === '6x5') {
+        endsInput.value = 6;
+        arrowsInput.value = 5;
+    } else if (preset === '6x6') {
+        endsInput.value = 6;
+        arrowsInput.value = 6;
+    } else if (preset === '10x3') {
+        endsInput.value = 10;
+        arrowsInput.value = 3;
+    } else if (preset === '2x3') {
+        endsInput.value = 2;
+        arrowsInput.value = 3;
+    } else if (preset === '2x6') {
+        endsInput.value = 2;
+        arrowsInput.value = 6;
+    }
+    calcMaxScore();
+}
+
+function calcMaxScore() {
+    const ends = parseInt(document.getElementById('inputTotalEnds').value) || 6;
+    const arrows = parseInt(document.getElementById('inputArrowsPerEnd').value) || 5;
+    const maxScore = ends * arrows * 10;
+    const display = document.getElementById('maxScoreDisplay');
+    if (display) {
+        display.innerText = `${maxScore} Poin (${ends} Seri × ${arrows} Panah)`;
+    }
+}
+
+function openDirectEval(sessionId, tech, mental, recom) {
+    document.getElementById('evalSessionIdSpan').innerText = sessionId;
+    document.getElementById('evalDirectSessionId').value = sessionId;
+    document.getElementById('evalDirectTechnique').value = tech || '';
+    document.getElementById('evalDirectMental').value = mental || '';
+    document.getElementById('evalDirectRecom').value = recom || '';
+    const modal = new bootstrap.Modal(document.getElementById('coachEvalModalDirect'));
+    modal.show();
+}
+
+function submitDirectEval() {
+    const sid = document.getElementById('evalDirectSessionId').value;
+    const tech = document.getElementById('evalDirectTechnique').value;
+    const mental = document.getElementById('evalDirectMental').value;
+    const recom = document.getElementById('evalDirectRecom').value;
+
+    fetch('api/save_session.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            session_id: sid,
+            coach_notes_technique: tech,
+            coach_notes_mental: mental,
+            coach_recommendation: recom,
+            mark_completed: true
+        })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.status === 'success') {
+            alert('✔ Catatan evaluasi coach berhasil disimpan!');
+            location.reload();
+        } else {
+            alert('Gagal: ' + res.message);
+        }
+    })
+    .catch(() => alert('Terjadi gangguan jaringan saat menyimpan evaluasi.'));
+}
 </script>
 
 <?php require_once __DIR__ . '/views/footer.php'; ?>

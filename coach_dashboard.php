@@ -333,6 +333,9 @@ require_once __DIR__ . '/views/header.php';
                                 </td>
                                 <td style="white-space: nowrap;">
                                     <div style="display: flex; gap: 0.35rem;">
+                                        <button type="button" class="btn btn-outline-warning btn-sm" title="Beri / Edit Catatan Evaluasi Pelatih" onclick="openCoachEvalModal(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['archer_name'])) ?>', <?= htmlspecialchars(json_encode($s['coach_notes_technique'] ?? '')) ?>, <?= htmlspecialchars(json_encode($s['coach_notes_mental'] ?? '')) ?>, <?= htmlspecialchars(json_encode($s['coach_recommendation'] ?? '')) ?>)">
+                                            ✍️ Evaluasi
+                                        </button>
                                         <a href="plotter.php?session_id=<?= $s['id'] ?>" class="btn btn-secondary btn-sm" title="Buka Papan Plotter">
                                             🎯 Plotter
                                         </a>
@@ -349,6 +352,37 @@ require_once __DIR__ . '/views/header.php';
         <?php endif; ?>
     </div>
 </main>
+
+<!-- MODAL EVALUASI PELATIH SESI -->
+<div id="coachEvalModal" class="login-modal-overlay" style="display: none;">
+    <div class="login-error-modal" style="max-width: 520px; width: 92%; text-align: left;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0; color: #fff;">
+                ✍️ Catatan Evaluasi Pelatih Sesi #<span id="evalSessionIdSpan"></span> (<span id="evalArcherNameSpan" style="color: var(--primary);"></span>)
+            </h3>
+            <button type="button" onclick="closeModals()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer;">&times;</button>
+        </div>
+        <form id="coachEvalFormDirect" onsubmit="submitCoachEval(event)">
+            <input type="hidden" id="evalSessionIdInput">
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+                <label class="form-label" style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1;">1. Evaluasi Form &amp; Teknik (Stance, Anchor, Release)</label>
+                <textarea class="form-control" id="evalTechnique" rows="3" placeholder="Contoh: Tarikan siku konsisten, perbaiki rilis agar tidak menyentak..."></textarea>
+            </div>
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+                <label class="form-label" style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1;">2. Evaluasi Mental &amp; Fokus</label>
+                <input type="text" class="form-control" id="evalMental" placeholder="Contoh: Sangat tenang saat tembakan terakhir"></textarea>
+            </div>
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+                <label class="form-label" style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1;">3. Rekomendasi / PR Latihan di Rumah</label>
+                <input type="text" class="form-control" id="evalRecom" placeholder="Contoh: Latihan SPT 15 menit setiap pagi">
+            </div>
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
+                <button type="button" class="btn btn-secondary btn-block" onclick="closeModals()">Batal</button>
+                <button type="submit" class="btn btn-primary btn-block" id="btnSaveCoachEval">💾 Simpan Catatan</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <!-- MODAL BERI IZIN UJIAN KENAIKAN JARAK -->
 <div id="grantModal" class="login-modal-overlay" style="display: none;">
@@ -395,6 +429,52 @@ require_once __DIR__ . '/views/header.php';
 </div>
 
 <script>
+function openCoachEvalModal(sessId, archerName, tech, mental, recom) {
+    document.getElementById('evalSessionIdInput').value = sessId;
+    document.getElementById('evalSessionIdSpan').textContent = sessId;
+    document.getElementById('evalArcherNameSpan').textContent = archerName;
+    document.getElementById('evalTechnique').value = tech || '';
+    document.getElementById('evalMental').value = mental || '';
+    document.getElementById('evalRecom').value = recom || '';
+    document.getElementById('coachEvalModal').style.display = 'flex';
+}
+
+async function submitCoachEval(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSaveCoachEval');
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+
+    const sessId = document.getElementById('evalSessionIdInput').value;
+    const payload = {
+        session_id: parseInt(sessId),
+        coach_notes_technique: document.getElementById('evalTechnique').value,
+        coach_notes_mental: document.getElementById('evalMental').value,
+        coach_recommendation: document.getElementById('evalRecom').value,
+        mark_completed: true
+    };
+
+    try {
+        const res = await fetch('api/save_session.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+            alert('✔ Catatan evaluasi pelatih berhasil disimpan!');
+            location.reload();
+        } else {
+            alert('Gagal: ' + (json.message || 'Terjadi kesalahan'));
+        }
+    } catch (err) {
+        alert('Terjadi kesalahan jaringan: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 Simpan Catatan';
+    }
+}
+
 function openGrantModal(id, name) {
     document.getElementById('grantArcherId').value = id;
     document.getElementById('grantArcherName').textContent = name;
@@ -408,8 +488,12 @@ function openRevokeModal(id, name) {
 }
 
 function closeModals() {
-    document.getElementById('grantModal').style.display = 'none';
-    document.getElementById('revokeModal').style.display = 'none';
+    const gm = document.getElementById('grantModal');
+    const rm = document.getElementById('revokeModal');
+    const cm = document.getElementById('coachEvalModal');
+    if (gm) gm.style.display = 'none';
+    if (rm) rm.style.display = 'none';
+    if (cm) cm.style.display = 'none';
 }
 </script>
 

@@ -66,7 +66,12 @@ require_once __DIR__ . '/views/header.php';
     </form>
 
     <div style="display: flex; gap: 0.5rem;">
-        <a href="index.php" class="btn btn-secondary btn-sm">⬅ Dashboard</a>
+        <?php
+        $mRole = $_SESSION['role'] ?? 'parent';
+        $dashMonthly = in_array($mRole, ['coach', 'super_admin']) ? 'coach_dashboard.php' : 'app_dashboard.php';
+        if ($mRole === 'master_admin') $dashMonthly = 'master_tenants.php';
+        ?>
+        <a href="<?= $dashMonthly ?>" class="btn btn-secondary btn-sm">⬅ Dashboard</a>
         <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">🖨️ Cetak Rekap Bulanan</button>
     </div>
 </div>

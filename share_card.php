@@ -120,6 +120,13 @@ require_once __DIR__ . '/views/header.php';
             <a href="report_session.php?session_id=<?= $session['id'] ?>" class="btn btn-secondary btn-block">
                 📜 Lihat Lembar Rapot Resmi
             </a>
+            <?php
+            $scRole = $_SESSION['role'] ?? 'parent';
+            $scBack = in_array($scRole, ['coach', 'super_admin']) ? 'coach_dashboard.php' : 'app_dashboard.php';
+            ?>
+            <a href="<?= $scBack ?>" class="btn btn-outline-secondary btn-block">
+                ⬅️ Kembali ke Dashboard
+            </a>
         </div>
     </div>
 </main>

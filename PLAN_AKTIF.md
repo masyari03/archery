@@ -517,9 +517,72 @@
 
 ---
 
+### 60. 🧹 Eliminasi Menu Redundan "Portal Scoring" & "Web Publik" dari Navbar Seluruh Role (`views/navbar.php`)
+- **Masalah dari Laporan Pengguna**:
+  - Pada header navbar di seluruh dashboard (Super Admin, Admin Klub, Coach, Ortu), terdapat tombol `[ 📊 Portal Scoring ]` dan `[ 🌐 Web Publik ]` yang membingungkan dan tidak efisien.
+- **Rencana Eksekusi**:
+  1. Hapus pill link `[ 📊 Portal Scoring ]` dan `[ 🌐 Web Publik ]` dari bar navigasi atas di `views/navbar.php`.
+  2. Brand logo tetap menjadi tombol home pintar yang mengarahkan user langsung ke dashboard utamanya sesuai role.
+  3. Menu "Lihat Web Publik Klub" dipindahkan secara rapi ke dalam dropdown profil pengguna (pojok kanan atas) sebagai opsi peninjauan profil.
+
+### 61. 🎨 Perapihan Visual & Perbaikan Bug Teks Tumpang Tindih Medsos Share Card (`share_card.php`, `assets/js/social_card.js`) (Gambar 2)
+- **Akar Masalah dari Screenshot Pengguna**:
+  - Pada `assets/js/social_card.js` baris 123-124, ukuran font diubah menjadi 42px sebelum fungsi `ctx.measureText(scoreText)` dijalankan, menyebabkan penghitungan lebar teks `282` menjadi terlalu pendek dan teks `/300` digambar menimpa angka `82`.
+  - Jika skor 0, ternary `0 || 282` menyebabkan angka skor salah menampilkan 282.
+- **Rencana Eksekusi**:
+  1. Ukur lebar font skor saat ukuran font 110px masih aktif sebelum beralih ke font sub-teks 42px.
+  2. Perbaiki fallback skor 0 agar menampilkan nilai skor aktual atlet.
+  3. Desain ulang layout kartu Story 9:16 dan Feed 1:1 agar proporsional, mewah, dengan gradien gelap, statistik rapi, dan sebaran panah target tajam.
+
+### 62. ⚙️ Pengaturan Format Sesi Latihan & Jumlah Seri / Anak Panah di Super Admin (`settings.php`, `app_dashboard.php`, `coach_dashboard.php`, `plotter.php`)
+- **Kebutuhan Pengguna**:
+  - Format standar panahan adalah 6 seri, namun klub membutuhkan fleksibilitas (misal: sesi percobaan 2 seri × 3/6 panah, latihan rutin 6 seri × 5 panah, sesi resmi WA 6 seri × 6 panah, indoor 10 seri × 3 panah).
+- **Rencana Eksekusi**:
+  1. Di `settings.php`, sediakan manajemen Preset Format Sesi Latihan klub (Nama Sesi, Jumlah Seri, Jumlah Anak Panah per Seri, Skor Maksimal otomatis).
+  2. Di modal input tembakan baru (`#newSessionModal`), sediakan dropdown pilihan format sesi latihan (Preset Sesi atau Input Custom Seri & Panah).
+  3. `plotter.php` secara otomatis menyesuaikan jumlah tombol seri dan jumlah anak panah per seri berdasarkan sesi yang dipilih.
+
+### 63. 🎯 Koleksi Model Papan Target Internasional (WA 10-Ring, WA 6-Ring, WA 3-Spot Vegas, NFAA Blue Face, WA Field) (`assets/js/target_plotter.js`, `plotter.php`) (Gambar 3)
+- **Kebutuhan Pengguna**:
+  - Menyediakan berbagai varian model papan target panahan sesuai standar internasional World Archery & NFAA.
+- **Rencana Eksekusi**:
+  1. Implementasikan rendering canvas untuk model-model target internasional di `target_plotter.js`:
+     - **WA 10-Ring Standard (Full Face 80/122/40cm)**: 10 cincin warna (Emas 10-9, Merah 8-7, Biru 6-5, Hitam 4-3, Putih 2-1) + X Ring.
+     - **WA 6-Ring Center Spot (Compound/Spot)**: Cincin 5 s/d 10 + X (Emas, Merah, Biru; luar 5 dihitung Miss).
+     - **WA Indoor 3-Spot Vertical (Triple Spot 40cm)**: 3 target vertikal independen (Spot 1, 2, 3) masing-masing 6-10 + X.
+     - **NFAA Indoor Blue Face**: Cincin Biru (1-4) dan Putih (5 + X).
+     - **WA Field Archery Face**: Cincin Hitam (1-4) dan Emas (5 + X/6).
+  2. Sediakan selector target interaktif di `plotter.php` sehingga pengguna dapat beralih model target dengan aturan perhitungan skor yang sesuai secara otomatis.
+
+### 64. 🔄 Perbaikan Tautan "Kembali ke Dashboard" yang Terlempar ke Web Utama (`report_session.php`, `report_monthly.php`, `views/navbar.php`) (Gambar 4)
+- **Akar Masalah dari Screenshot Pengguna**:
+  - Tombol *"⬅ Kembali ke Dashboard"* pada `report_session.php:L61`, `report_monthly.php:L69`, dan navbar bawah mobile masih menggunakan `href="index.php"`, yang kini merupakan Web Profil Publik Klub.
+- **Rencana Eksekusi**:
+  1. Buat resolusi URL dashboard berbasis role aktif:
+     - Coach ➔ `coach_dashboard.php`
+     - Super Admin ➔ `coach_dashboard.php` atau `cms_admin.php`
+     - Ortu / Atlet ➔ `app_dashboard.php`
+  2. Ganti semua tautan kembali di `report_session.php` dan `report_monthly.php` agar membawa pengguna tepat ke dashboard kerja mereka.
+
+### 65. 📝 Form Pengisian Catatan Evaluasi Pelatih & Perbaikan Akses Rapot Sesi A4 (`app_dashboard.php`, `coach_dashboard.php`, `report_session.php`) (Gambar 5)
+- **Akar Masalah dari Screenshot Pengguna**:
+  - Tombol Rapot pada tabel sesi di `app_dashboard.php` memanggil `report_session.php?id=...`, padahal file tersebut memeriksa `$_GET['session_id']`, sehingga memicu pesan error *"Session ID tidak valid"*.
+  - Status evaluasi membaca kolom fiktif `coach_evaluation_status` sehingga selalu berstatus *"Menunggu Evaluasi"* meskipun sesi sudah memiliki catatan lengkap (seperti Sesi #1).
+  - Belum ada modal mandiri bagi Coach untuk mengisi atau mengedit evaluasi di luar plotter canvas.
+- **Rencana Eksekusi**:
+  1. Di `report_session.php`, terima parameter `$_GET['session_id']` maupun `$_GET['id']` agar kedua tautan berfungsi mulus tanpa error.
+  2. Di `coach_dashboard.php`, `app_dashboard.php`, dan `report_session.php`, sediakan tombol dan Modal `[ ✍️ Evaluasi Pelatih ]` untuk mengisi atau merevisi:
+     - Catatan Form & Teknik (Stance, Anchor, Release)
+     - Catatan Mental & Fokus
+     - Rekomendasi / PR Latihan di Rumah
+  3. Perbaiki status evaluasi di `app_dashboard.php` agar membaca `coach_notes_technique` dan `status = 'completed'`, sehingga sesi yang telah dinilai langsung berstatus `✔ SUDAH DIEVALUASI COACH` beserta cuplikan catatan pelatih.
+
+---
+
 ## 🏆 STATUS EKSEKUSI & DEPLOYMENT
-- **Poin 1 s/d 54**: 100% Selesai, Teruji, dan Aktif di Server & Cloudflare.
-- **Poin 55 s/d 59**: Siap Dieksekusi Menunggu Konfirmasi Pengguna.
+- **Poin 1 s/d 59**: 100% Selesai, Teruji, dan Aktif di Server & Cloudflare.
+- **Poin 60 s/d 65**: Siap Dieksekusi Menunggu Konfirmasi Pengguna.
+
 
 
 
