@@ -279,6 +279,32 @@ $hasMasterMenu    = ($currentRole === 'master_admin');
 </div>
 <?php endif; ?>
 
+<?php if (!empty($_SESSION['is_demo'])): ?>
+<!-- DEMO MODE SIMULATION BANNER -->
+<div class="demo-mode-bar no-print" style="background: linear-gradient(90deg, #b45309, #d97706); color: #fff; padding: 6px 16px; font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; z-index: 1040; position: relative;">
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-dark text-warning fw-bold px-2 py-1">⚡ SIMULASI DEMO</span>
+        <span>Anda sedang mencoba sistem sebagai <b><?= htmlspecialchars($_SESSION['full_name'] ?? 'User Demo') ?> (<?= strtoupper($currentRole) ?>)</b></span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <div class="dropdown d-inline-block">
+            <button class="btn btn-dark btn-sm dropdown-toggle py-0 px-2" style="font-size: 0.75rem;" type="button" data-bs-toggle="dropdown">
+                🔄 Ganti Role Demo
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                <li><a class="dropdown-item small" href="demo_launch.php?role=coach">🏹 Masuk sbg Pelatih</a></li>
+                <li><a class="dropdown-item small" href="demo_launch.php?role=admin">🛡️ Masuk sbg Super Admin</a></li>
+                <li><a class="dropdown-item small" href="demo_launch.php?role=parent">👨‍👩‍👧‍👦 Masuk sbg Wali Santri</a></li>
+                <li><a class="dropdown-item small" href="demo_launch.php?role=archer">🎯 Coba Scoring Plotter</a></li>
+            </ul>
+        </div>
+        <a href="logout.php?demo=1" class="btn btn-outline-light btn-sm py-0 px-2" style="font-size: 0.75rem;">
+            🚪 Keluar ke Web Utama
+        </a>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- 1. TOP APP BAR TERPADU (FLUID RESPONSIVE UNTUK TABLET & HP) -->
 <header class="app-header no-print">
     <div class="header-inner">

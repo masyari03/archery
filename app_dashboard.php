@@ -13,6 +13,12 @@ if ($currentRole === 'master_admin') {
     exit;
 }
 
+// Jika Coach atau Admin ingin melihat grafik tren atlet tertentu via ?archer_id=X
+if (!empty($_GET['archer_id']) && in_array($currentRole, ['coach', 'super_admin', 'master_admin'])) {
+    $targetArcherId = (int)$_GET['archer_id'];
+    Auth::switchChild($targetArcherId, $pdo);
+}
+
 $currentArcher = Auth::currentArcher($pdo);
 
 if (!$currentArcher) {
@@ -95,6 +101,17 @@ require_once __DIR__ . '/views/header.php';
 ?>
 
 <div class="container pb-5">
+    <?php if (in_array($currentRole, ['coach', 'super_admin', 'master_admin'])): ?>
+        <div class="mb-3 mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2 p-2 px-3 rounded shadow-sm" style="background: rgba(2, 132, 199, 0.12); border: 1px solid rgba(2, 132, 199, 0.35);">
+            <div class="small text-info fw-bold d-flex align-items-center gap-2">
+                <i class="bi bi-eye-fill"></i> Mode Pantau Tren &amp; Statistik Atlet oleh Coach/Admin
+            </div>
+            <a href="coach_dashboard.php" class="btn btn-sm btn-outline-info d-flex align-items-center gap-1 shadow-sm fw-bold">
+                <i class="bi bi-arrow-left"></i> Kembali ke Dashboard Pelatih
+            </a>
+        </div>
+    <?php endif; ?>
+
     <!-- Top Athlete Profile Card -->
     <div class="card mb-4 mt-2 border-0 shadow-sm" style="background: linear-gradient(135deg, rgba(2, 132, 199, 0.15), rgba(15, 23, 42, 0.95)); border-left: 5px solid var(--accent-color) !important;">
         <div class="card-body p-4">

@@ -252,7 +252,7 @@ require_once __DIR__ . '/views/header.php';
                                     ⏸️ Tunda / Batalkan Izin Ujian
                                 </button>
                             <?php endif; ?>
-                            <a href="index.php?archer_id=<?= $a['id'] ?>" class="btn btn-secondary btn-sm btn-block">
+                            <a href="app_dashboard.php?archer_id=<?= $a['id'] ?>" class="btn btn-secondary btn-sm btn-block">
                                 📊 Lihat Tren Nilai Atlet ➔
                             </a>
                         </div>

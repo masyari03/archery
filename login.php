@@ -413,7 +413,7 @@ end_login_handler:
 </div>
 
 <!-- POP-UP MODAL ERROR LOGIN KEREN & RAMAH PENGGUNA -->
-<div class="modal-backdrop" id="errorLoginModal" <?= !empty($error) ? 'style="display: flex;"' : '' ?>>
+<div class="modal-backdrop" id="errorLoginModal" style="<?= !empty($error) ? 'display: flex;' : 'display: none;' ?>">
     <div class="modal-box" style="text-align: center;">
         <div style="width: 68px; height: 68px; margin: 0 auto 1.25rem; border-radius: 50%; background: conic-gradient(from 0deg, var(--ring-gold), var(--ring-red), var(--ring-blue), var(--ring-gold)); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 25px rgba(239, 68, 68, 0.4);">
             <span style="font-size: 30px;">🎯</span>

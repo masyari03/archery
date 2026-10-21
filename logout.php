@@ -13,5 +13,10 @@ if (ini_get("session.use_cookies")) {
 }
 setcookie('archery_remember', '', time() - 3600, '/');
 session_destroy();
-header('Location: login.php');
+
+if (isset($_GET['demo'])) {
+    header('Location: saas_marketing.php');
+} else {
+    header('Location: login.php');
+}
 exit;

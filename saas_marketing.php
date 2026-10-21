@@ -291,16 +291,19 @@ if (substr($cleanMasterWa, 0, 1) === '0') {
                                 </div>
                             </div>
 
-                            <!-- 1-Click Launch Buttons -->
+                            <!-- 1-Click Pure Direct Demo Launch Buttons -->
                             <div class="d-flex flex-column gap-2">
-                                <a href="login.php?club=demo&auto=coach" class="btn btn-warning btn-sm fw-bold text-dark py-2 d-flex align-items-center justify-content-center gap-2 shadow-sm">
-                                    <i class="bi bi-person-badge-fill"></i> 1-Klik Masuk sbg Pelatih Demo
+                                <a href="demo_launch.php?role=coach" class="btn btn-warning btn-sm fw-bold text-dark py-2 d-flex align-items-center justify-content-center gap-2 shadow-sm">
+                                    <i class="bi bi-person-badge-fill"></i> 🏹 1-Klik Masuk Langsung sbg Pelatih Demo
                                 </a>
-                                <a href="login.php?club=demo&auto=admin" class="btn btn-outline-info btn-sm py-1 d-flex align-items-center justify-content-center gap-2">
-                                    <i class="bi bi-shield-lock"></i> 1-Klik Masuk sbg Admin Demo
+                                <a href="demo_launch.php?role=admin" class="btn btn-outline-info btn-sm py-2 d-flex align-items-center justify-content-center gap-2">
+                                    <i class="bi bi-shield-lock"></i> 🛡️ 1-Klik Masuk Langsung sbg Super Admin Demo
                                 </a>
-                                <a href="login.php?club=demo&auto=parent" class="btn btn-outline-light btn-sm py-1 d-flex align-items-center justify-content-center gap-2">
-                                    <i class="bi bi-people"></i> 1-Klik Masuk sbg Ortu Demo
+                                <a href="demo_launch.php?role=parent" class="btn btn-outline-light btn-sm py-2 d-flex align-items-center justify-content-center gap-2">
+                                    <i class="bi bi-people"></i> 👨‍👩‍👧‍👦 1-Klik Masuk Langsung sbg Wali Atlet Demo
+                                </a>
+                                <a href="demo_launch.php?role=archer" class="btn btn-outline-success btn-sm py-2 d-flex align-items-center justify-content-center gap-2">
+                                    <i class="bi bi-bullseye"></i> 🎯 1-Klik Coba Scoring Plotter Lapangan
                                 </a>
                             </div>
                         </div>

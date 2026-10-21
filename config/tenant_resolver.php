@@ -31,6 +31,17 @@ class TenantResolver {
         // Hapus port jika ada (contoh: localhost:3008 -> localhost)
         $cleanHost = preg_replace('/:\d+$/', '', $host);
 
+        // 0. KHUSUS MODE DEMO MANDIRI (PURE SANDBOX)
+        if (!empty($_SESSION['is_demo']) && !empty($_SESSION['club_id'])) {
+            $stmt = $pdo->prepare("SELECT * FROM archery_clubs WHERE id = :id LIMIT 1");
+            $stmt->execute([':id' => (int)$_SESSION['club_id']]);
+            $demoTenant = $stmt->fetch();
+            if ($demoTenant) {
+                self::$cachedTenant = $demoTenant;
+                return $demoTenant;
+            }
+        }
+
         // 1. PRIORITAS UTAMA: Cek Subdomain Level 1 (misal: annahl.codika.my.id -> slug: annahl)
         $parts = explode('.', $cleanHost);
         if (count($parts) >= 3) {
@@ -130,7 +141,8 @@ class TenantResolver {
      * Dapatkan Seluruh Daftar Tenant Aktif
      */
     public static function getAllTenants(PDO $pdo): array {
-        $stmt = $pdo->query("SELECT id, club_name, club_code, subdomain_slug, custom_domain, city, primary_color, subscription_status FROM archery_clubs WHERE is_active = 1 ORDER BY club_name ASC");
+        // Eksklusifkan tenant 'demo' dari showcase klub publik
+        $stmt = $pdo->query("SELECT id, club_name, club_code, subdomain_slug, custom_domain, city, primary_color, subscription_status FROM archery_clubs WHERE is_active = 1 AND subdomain_slug != 'demo' ORDER BY club_name ASC");
         return $stmt->fetchAll();
     }
 

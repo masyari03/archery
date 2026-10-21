@@ -449,11 +449,79 @@
   3. Tambahkan responsivitas tombol CTA: pada viewport `< 576px`, tombol menjadi lebar 100% dengan padding proporsional.
   4. Rampingkan header tombol "Hubungi Master Admin" di mobile agar rapi bersanding dengan logo platform.
 
+### 55. 🏢 Pemisahan Mutlak Demo vs Tenant Klub & Eliminasi Total Demo dari Showcase Klub Mitra (`saas_marketing.php`, `config/tenant_resolver.php`, `setup_db.php`)
+- **Masalah dari Screenshot Pengguna**:
+  - Pada halaman utama SaaS ([`saas_marketing.php`](file:///c:/laragon/www/target_archery/saas_marketing.php)) di bagian *"Klub-Klub Panahan yang Telah Bergabung"*, kartu `DEMO ARCHERY CLUB` (Jakarta Sandbox) ikut muncul bersama klub mitra asli.
+  - Pengguna menegaskan: *demo dan tenant itu berbeda, hilangkan dari klub-klub panahan yang bergabung*.
+- **Rencana Eksekusi**:
+  1. Hapus entri `DEMO ARCHERY CLUB` dari showcase klub yang bergabung. Berikan filter ketat pada `TenantResolver::getAllTenants()`: `WHERE subdomain_slug != 'demo' AND is_active = 1`.
+  2. Pastikan showcase klub mitra di `saas_marketing.php` murni hanya menampilkan klub-klub panahan klien nyata: **An-Nahl Archery Club** dan **Focus Archery Club**.
+  3. Panel Master Admin Tenant ([`master_tenants.php`](file:///c:/laragon/www/target_archery/master_tenants.php)) dan Penagihan SaaS ([`master_billing.php`](file:///c:/laragon/www/target_archery/master_billing.php)) juga difilter bersih dari klub demo.
+
+### 56. ⚡ Arsitektur 1-Click Pure Direct Demo Entry (`demo_launch.php`) — Langsung Masuk ke Akun Tanpa Form Login & Tanpa Password
+- **Masalah dari Screenshot Pengguna**:
+  - Saat calon klien mengklik tombol demo di web utama, sistem mengarah ke `login.php?club=demo&auto=coach` dan memicu popup *"Mohon Maaf, Akses Belum Sesuai AN-NAHL ARCHERY CLUB"*.
+  - Pengguna menginstruksikan: *demo itu hanya untuk testing, buatkan saja dari web utama ketika diklik langsung masuk ke akunnya tanpa harus meminta buat akun ke web annahl*.
+- **Rencana Eksekusi**:
+  1. Buat endpoint mandiri: [`demo_launch.php`](file:///c:/laragon/www/target_archery/demo_launch.php).
+  2. Pada kartu Interactive Demo di `saas_marketing.php`, pasang tombol langsung:
+     - 🏹 **1-Klik Coba Demo Pelatih (Coach)** -> `demo_launch.php?role=coach`
+     - 🛡️ **1-Klik Coba Demo Super Admin** -> `demo_launch.php?role=admin`
+     - 👨‍👩‍👧‍👦 **1-Klik Coba Demo Orang Tua** -> `demo_launch.php?role=parent`
+     - 🎯 **1-Klik Coba Demo Scoring Tembakan Lapangan** -> `demo_launch.php?role=archer`
+  3. Alur Kerja `demo_launch.php`:
+     - Tidak meminta username atau password sama sekali.
+     - Menginisialisasi sesi demo terisolasi (`$_SESSION['is_demo'] = true`, `$_SESSION['role'] = $targetRole`, `$_SESSION['full_name'] = 'Demo ' . ucfirst($targetRole)`).
+     - Langsung me-redirect pengunjung ke dashboard yang bersangkutan dalam hitungan milidetik:
+       - Pelatih -> langsung terbuka [`coach_dashboard.php`](file:///c:/laragon/www/target_archery/coach_dashboard.php)
+       - Admin Klub -> langsung terbuka [`cms_admin.php`](file:///c:/laragon/www/target_archery/cms_admin.php)
+       - Orang Tua -> langsung terbuka [`app_dashboard.php`](file:///c:/laragon/www/target_archery/app_dashboard.php)
+       - Atlet -> langsung terbuka [`plotter.php`](file:///c:/laragon/www/target_archery/plotter.php)
+  4. Banner Khusus Mode Demo:
+     - Di bagian paling atas dashboard saat demo aktif, tampilkan Banner Glassmorphic:
+       `⚡ ANDA SEDANG BERADA DI MODE DEMO (SIMULASI SISTEM) &bull; Akses: [Role] &bull; [Ganti Role Demo] &bull; [Keluar ke Web Utama]`
+     - Tombol "Keluar ke Web Utama" mengarah ke `logout.php?demo=1` yang langsung membersihkan sesi demo dan mengembalikan ke `saas_marketing.php`.
+
+### 57. 🛡️ Perbaikan Bug Modal Backdrop Gelap di `login.php` (Zero False Positive Error Modal)
+- **Akar Masalah dari Screenshot Pengguna**:
+  - Di `login.php` baris 416, tag `<div class="modal-backdrop" id="errorLoginModal" <?= !empty($error) ? 'style="display: flex;"' : '' ?>>` tidak memiliki `display: none;` ketika `$error` kosong.
+  - Karena kelas `.modal-backdrop` bawaan Bootstrap 5 berposisi `fixed` dengan warna hitam transparan, elemen tersebut muncul mengaburkan layar meskipun tidak ada error.
+- **Rencana Eksekusi**:
+  1. Perbaiki tag pembuka modal di `login.php`:
+     `<div class="modal-backdrop" id="errorLoginModal" style="<?= !empty($error) ? 'display: flex;' : 'display: none;' ?>">`
+  2. Menjamin pop-up modal error hanya dirender jika benar-benar ada error login gagal dari proses submit POST.
+
+---
+
+### 58. 📊 Perbaikan Tombol "Lihat Tren Nilai Atlet" di `coach_dashboard.php` & Akses Pelatih di `app_dashboard.php`
+- **Akar Masalah dari Laporan Pengguna**:
+  - Tombol *"Lihat Tren Nilai Atlet ➔"* pada kartu atlet di `coach_dashboard.php` baris 255 masih menggunakan tautan lawas: `href="index.php?archer_id=<?= $a['id'] ?>"`.
+  - Karena `index.php` telah beralih fungsi menjadi Web Landing Page / Profil Publik Klub (CMS World Archery), saat diklik pelatih justru terlempar ke halaman depan profil klub.
+- **Rencana Eksekusi**:
+  1. Ubah tautan di `coach_dashboard.php` menjadi `app_dashboard.php?archer_id=<?= $a['id'] ?>`.
+  2. Di `app_dashboard.php`:
+     - Tambahkan penanganan parameter `$_GET['archer_id']`: jika diakses oleh Coach, Super Admin, atau Master Admin, panggil `Auth::switchChild((int)$_GET['archer_id'], $pdo)`.
+     - Tampilkan tombol navigasi balik di bagian atas: `[ ⬅️ Kembali ke Dashboard Coach ]` sehingga pelatih dapat dengan mudah memantau grafik statistik atlet lalu kembali.
+
+### 59. 🎯 Klarifikasi & Penyempurnaan UX Plotter Saat Sesi Kosong / Belum Ada Tembakan (`plotter.php`)
+- **Klarifikasi Database & Jawaban Pertanyaan Pengguna**:
+  - Pada screenshot pengguna di `coach_dashboard.php`, baris teratas adalah **Sesi #3** dengan skor `0 / 300`.
+  - Di database MySQL remote, sesi #3 tercatat baru di-create dan memang belum ada anak panah yang ditembakkan (`archery_shots` = 0 baris). Itulah sebabnya saat tombol `[🎯 Plotter]` pada sesi #3 dibuka, target face masih bersih (kosong/0 data).
+  - Sebagai pembanding, Sesi #1 di database memiliki 30 tembakan lengkap (skor 282), dan Sesi #2 memiliki 1 tembakan (skor 7).
+- **Rencana Penyempurnaan Sistem**:
+  1. Di `plotter.php`:
+     - Jika parameter `session_id` diberikan di URL (`?session_id=X`), sistem langsung mengambil detail sesi dari database terlebih dahulu sebelum mewajibkan konteks atlet anak. Jika sesi valid, otomatis aktifkan atlet tersebut via `$_SESSION['active_child_id'] = $session['archer_id']`. Hal ini menjamin Coach atau Admin tidak akan pernah mengalami error saat membuka plotter sesi atlet mana pun.
+  2. Berikan Banner Edukasi UX Ramah di atas target face jika sesi masih 0 tembakan:
+     `ℹ️ Sesi ini baru dibuat dan belum memiliki tembakan. Silakan klik atau sentuh pada lingkaran target untuk mulai memplot anak panah pertama.`
+  3. Sediakan tombol navigasi cepat `[ ⬅️ Kembali ke Dashboard Pelatih ]` jika dibuka oleh pengguna ber-role Coach atau Admin.
+
 ---
 
 ## 🏆 STATUS EKSEKUSI & DEPLOYMENT
-- **Poin 1 s/d 48**: 100% Selesai, Teruji, dan Aktif di Server & Cloudflare (Domain `archery.codika.my.id`).
-- **Poin 49 s/d 54 (Edisi Baru)**: Siap Dieksekusi Menunggu Konfirmasi Pengguna.
+- **Poin 1 s/d 54**: 100% Selesai, Teruji, dan Aktif di Server & Cloudflare.
+- **Poin 55 s/d 59**: Siap Dieksekusi Menunggu Konfirmasi Pengguna.
+
+
 
 
 

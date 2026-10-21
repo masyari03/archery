@@ -4,48 +4,67 @@ require_once __DIR__ . '/config/auth.php';
 Auth::requireAuth();
 
 $currentUser = Auth::user();
-$currentArcher = Auth::currentArcher($pdo);
+$sessionId = (int)($_GET['session_id'] ?? 0);
+$session = null;
 
-if (!$currentArcher) {
-    die("Atlet tidak ditemukan. Silakan pilih atlet terlebih dahulu.");
+// Jika session_id disediakan, ambil data sesi terlebih dahulu
+if ($sessionId > 0) {
+    $stmtSess = $pdo->prepare("
+        SELECT s.*, a.full_name AS archer_name, a.nis, a.bow_category AS default_bow, t.target_name, t.code AS target_code
+        FROM archery_sessions s
+        JOIN archery_archers a ON a.id = s.archer_id
+        LEFT JOIN archery_targets t ON t.id = s.target_id
+        WHERE s.id = :id
+    ");
+    $stmtSess->execute([':id' => $sessionId]);
+    $session = $stmtSess->fetch();
+    if ($session) {
+        $_SESSION['active_child_id'] = (int)$session['archer_id'];
+    }
 }
 
-$archerId = (int)$currentArcher['id'];
-$sessionId = (int)($_GET['session_id'] ?? 0);
+$currentArcher = Auth::currentArcher($pdo);
 
-// Jika tidak ada session_id, cari sesi in_progress hari ini atau buat sesi baru
-if ($sessionId <= 0) {
+if (!$currentArcher && !$session) {
+    die("<div style='padding:40px;text-align:center;font-family:sans-serif;'><h3>Atlet tidak ditemukan.</h3><p>Silakan pilih atlet terlebih dahulu atau akses dari daftar sesi.</p><a href='coach_dashboard.php'>Kembali ke Dashboard</a></div>");
+}
+
+$archerId = $session ? (int)$session['archer_id'] : (int)$currentArcher['id'];
+
+// Jika tidak ada session_id yang valid, cari sesi in_progress hari ini atau buat sesi baru
+if (!$session) {
     $today = date('Y-m-d');
     $stmtFind = $pdo->prepare("SELECT id FROM archery_sessions WHERE archer_id = :aid AND session_date = :dt AND status = 'in_progress' ORDER BY id DESC LIMIT 1");
     $stmtFind->execute([':aid' => $archerId, ':dt' => $today]);
     $sessionId = (int)$stmtFind->fetchColumn();
 
     if ($sessionId <= 0) {
+        $clubId = (int)($currentArcher['club_id'] ?? ($_SESSION['club_id'] ?? 1));
         // Buat sesi baru default (6 Seri @ 5 Panah = 300 Max)
         $stmtNew = $pdo->prepare("
             INSERT INTO archery_sessions 
             (club_id, archer_id, coach_id, session_date, start_time, distance_meter, bow_category, target_id, total_ends, arrows_per_end, max_possible_score, status)
-            VALUES (1, :aid, 2, :dt, CURTIME(), 18, :bow, 4, 6, 5, 300, 'in_progress')
+            VALUES (:cid, :aid, 2, :dt, CURTIME(), 18, :bow, 4, 6, 5, 300, 'in_progress')
         ");
         $stmtNew->execute([
+            ':cid' => $clubId,
             ':aid' => $archerId,
             ':dt' => $today,
             ':bow' => $currentArcher['bow_category'] ?? 'Barebow'
         ]);
         $sessionId = (int)$pdo->lastInsertId();
     }
-}
 
-// Ambil Data Sesi
-$stmtSess = $pdo->prepare("
-    SELECT s.*, a.full_name AS archer_name, a.nis, a.bow_category AS default_bow, t.target_name, t.code AS target_code
-    FROM archery_sessions s
-    JOIN archery_archers a ON a.id = s.archer_id
-    LEFT JOIN archery_targets t ON t.id = s.target_id
-    WHERE s.id = :id
-");
-$stmtSess->execute([':id' => $sessionId]);
-$session = $stmtSess->fetch();
+    $stmtSess = $pdo->prepare("
+        SELECT s.*, a.full_name AS archer_name, a.nis, a.bow_category AS default_bow, t.target_name, t.code AS target_code
+        FROM archery_sessions s
+        JOIN archery_archers a ON a.id = s.archer_id
+        LEFT JOIN archery_targets t ON t.id = s.target_id
+        WHERE s.id = :id
+    ");
+    $stmtSess->execute([':id' => $sessionId]);
+    $session = $stmtSess->fetch();
+}
 
 if (!$session) {
     die("Sesi latihan tidak ditemukan.");
@@ -136,6 +155,11 @@ require_once __DIR__ . '/views/header.php';
                 <div id="syncStatusIndicator" style="font-size: 0.8rem; font-weight: 600; margin-right: 0.5rem;">
                     <span style="color: #10b981;">✔ Data Tersinkron</span>
                 </div>
+                <?php if (in_array($_SESSION['role'] ?? '', ['coach', 'super_admin', 'master_admin'])): ?>
+                    <a href="coach_dashboard.php" class="btn btn-secondary btn-sm" title="Kembali ke Dashboard Pelatih">
+                        ⬅️ Dashboard Pelatih
+                    </a>
+                <?php endif; ?>
                 <a href="report_session.php?session_id=<?= $session['id'] ?>" class="btn btn-secondary btn-sm">
                     📜 Rapot Cetak
                 </a>
@@ -145,6 +169,15 @@ require_once __DIR__ . '/views/header.php';
             </div>
         </div>
     </div>
+
+    <?php if (empty($allShots)): ?>
+        <div id="emptySessionNotice" class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size: 0.85rem; border-left: 4px solid var(--primary); background: rgba(2, 132, 199, 0.12); color: #e2e8f0; border-radius: 8px;">
+            <i class="bi bi-info-circle-fill text-info fs-5"></i>
+            <div>
+                <strong>Sesi Baru (0 Tembakan):</strong> Target masih bersih karena belum ada anak panah yang ditembakkan. Silakan sentuh atau klik pada target di bawah untuk mulai memplot anak panah pertama!
+            </div>
+        </div>
+    <?php endif; ?>
 
     <div class="plotter-grid">
         <!-- KOLOM KIRI: TARGET FACE CANVAS + KACA PEMBESAR (LOUPE) -->

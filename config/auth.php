@@ -134,9 +134,9 @@ class Auth {
             exit;
         }
 
-        // 2. Strict Multi-Tenant Boundary: cegah user tenant A mengakses portal tenant B
+        // 2. Strict Multi-Tenant Boundary: cegah user tenant A mengakses portal tenant B (Kecuali Master Admin & Akun Simulasi Demo)
         $userRole = $_SESSION['role'] ?? 'parent';
-        if ($userRole !== 'master_admin' && isset($pdo)) {
+        if ($userRole !== 'master_admin' && empty($_SESSION['is_demo']) && isset($pdo)) {
             require_once __DIR__ . '/tenant_resolver.php';
             $currentTenant = TenantResolver::resolve($pdo);
             $tenantId = (int)$currentTenant['id'];
